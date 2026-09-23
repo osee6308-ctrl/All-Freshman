@@ -1,0 +1,69 @@
+{
+  "version": 2,
+  "updated": "2026-09-23",
+  "blacklist": [],
+  "notifications": [],
+  "tutorials": {
+    "register": { "title": "How to register", "url": "" },
+    "pay": { "title": "How to pay", "url": "" }
+  },
+  "settings": {
+    "FIREBASE": { "apiKey": "", "authDomain": "", "projectId": "", "storageBucket": "", "messagingSenderId": "", "appId": "" }
+  },
+  "registeredPhones": [],
+
+  "universityInfo": {
+    "Arsi University": [
+      { "title": "Welcome, Freshman!", "stream": "Both", "body": "<p>Your first year at Arsi University is a foundation year. Attend every class, take notes, and use the practice exams here to prepare.</p>" },
+      { "title": "Grading System", "stream": "Both", "body": "<p>Letter grades: <strong>A</strong> ≥ 90, <strong>B</strong> 80–89, <strong>C</strong> 70–79, <strong>D</strong> 60–69, <strong>F</strong> &lt; 60.</p>" },
+      { "title": "Important Contacts", "stream": "Both", "body": "<p>Registrar: Block 12, Room 204<br>Student Affairs: Block 5, Ground Floor<br>Library: Main Campus, 8:00–22:00</p>" }
+    ]
+  },
+
+  "generalSubjects": {
+    "psychology": { "name": "General Psychology", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "Who founded the first psychology lab in 1879?", "options": ["Freud", "Wundt", "James", "Watson"], "answer": 1, "explanation": "Wilhelm Wundt in Leipzig." },
+      { "q": "Who is the founder of psychoanalysis?", "options": ["Rogers", "Skinner", "Freud", "Maslow"], "answer": 2, "explanation": "Sigmund Freud." },
+      { "q": "Behaviorism emphasizes:", "options": ["Unconscious mind", "Observable behavior", "Mental structure", "Free will"], "answer": 1, "explanation": "Watson's behaviorism." },
+      { "q": "Which approach focuses on self-actualization?", "options": ["Behavioral", "Humanistic", "Biological", "Cognitive"], "answer": 1, "explanation": "Humanistic psychology." },
+      { "q": "Pavlov demonstrated which type of conditioning?", "options": ["Operant", "Classical", "Observational", "Latent"], "answer": 1, "explanation": "Classical conditioning." },
+      { "q": "The Big Five personality acronym is:", "options": ["SMART", "OCEAN", "BASIC", "GROWTH"], "answer": 1, "explanation": "Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism." }
+    ], "notes": [] },
+    "math": { "name": "Mathematics", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "How many subsets does a 4-element set have?", "options": ["4", "8", "16", "32"], "answer": 2, "explanation": "2^4 = 16." },
+      { "q": "What is i²?", "options": ["1", "-1", "i", "0"], "answer": 1, "explanation": "By definition of the imaginary unit." },
+      { "q": "Modus Ponens is:", "options": ["p→q; p; therefore q", "p→q; ¬q; therefore ¬p", "p∨q; ¬p; therefore q", "p∧q; therefore p"], "answer": 0, "explanation": "Standard inference rule." }
+    ], "notes": [] },
+    "logic": { "name": "Logic & Critical Thinking", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "Which is a premise indicator?", "options": ["Therefore", "Because", "Thus", "Hence"], "answer": 1, "explanation": "'Because' introduces a premise." },
+      { "q": "Attacking the person instead of the argument is:", "options": ["Ad Hominem", "Ad Populum", "Ad Misericordiam", "Ad Baculum"], "answer": 0, "explanation": "Ad hominem." },
+      { "q": "'All S are P' is which categorical form?", "options": ["A", "E", "I", "O"], "answer": 0, "explanation": "Universal Affirmative." }
+    ], "notes": [] },
+    "english": { "name": "Communicative English", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "Choose the correct spelling:", "options": ["Recieve", "Receive", "Receeve", "Receve"], "answer": 1, "explanation": "i before e except after c." },
+      { "q": "If I ___ rich, I would travel the world.", "options": ["am", "was", "were", "will be"], "answer": 2, "explanation": "Type 2 conditional uses 'were'." }
+    ], "notes": [] },
+    "geography": { "name": "Geography of Ethiopia", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "Ethiopia's astronomical location:", "options": ["3°N–15°N, 33°E–48°E", "0–10°N, 20–40°E", "5°S–10°N, 30–50°E", "10–20°N, 40–60°E"], "answer": 0, "explanation": "Astronomical position." },
+      { "q": "Largest lake in Ethiopia:", "options": ["Abaya", "Tana", "Chamo", "Ziway"], "answer": 1, "explanation": "Lake Tana." },
+      { "q": "Highest mountain in Ethiopia:", "options": ["Batu", "Ras Dashen", "Guna", "Kaka"], "answer": 1, "explanation": "Ras Dashen, 4,620 m." }
+    ], "notes": [] },
+    "physics": { "name": "General Physics", "semester": 1, "stream": "Natural", "questions": [
+      { "q": "The SI unit of force is:", "options": ["Joule", "Newton", "Pascal", "Watt"], "answer": 1, "explanation": "N = kg·m/s²." },
+      { "q": "Ohm's law states:", "options": ["V = I/R", "V = I × R", "I = V × R", "R = V × I"], "answer": 1, "explanation": "Voltage = current × resistance." }
+    ], "notes": [] }
+  },
+
+  "universities": {
+    "Arsi University": {
+      "Natural": {
+        "1": { "pdfs": [], "notes": [], "exams": [] },
+        "2": { "pdfs": [], "notes": [], "exams": [] }
+      },
+      "Social": {
+        "1": { "pdfs": [], "notes": [], "exams": [] },
+        "2": { "pdfs": [], "notes": [], "exams": [] }
+      }
+    }
+  }
+}

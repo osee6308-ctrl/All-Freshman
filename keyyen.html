@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Keys & Payments</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui; }
+  body { min-height:100vh; padding:20px; background: linear-gradient(135deg,#1e3c72,#6a3093); color:#fff; display:flex; flex-direction:column; align-items:center; }
+  .box { width:100%; max-width:480px; }
+  h1 { font-size:20px; margin-bottom:6px; text-align:center; }
+  .warn { background:#ff4757; color:#fff; padding:10px 14px; border-radius:10px; font-size:12px; font-weight:700; text-align:center; margin-bottom:14px; }
+  .card { background:#fff; color:#222; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.3); margin-bottom:14px; }
+  .card h2 { font-size:16px; color:#4a2568; margin-bottom:12px; }
+  input, button, textarea, select { width:100%; padding:13px; font-size:14px; border-radius:10px; border:none; margin:6px 0; font-family:inherit; }
+  input, textarea, select { background:#f7f7fa; color:#222; border:2px solid #e0e0e6; }
+  .hash-input { font-family:monospace; text-transform:uppercase; letter-spacing:3px; font-size:18px; text-align:center; }
+  button { background:#6a3093; color:#fff; font-weight:700; cursor:pointer; }
+  button.green { background:#4caf50; }
+  button.orange { background:#ff9800; }
+  button.red { background:#ff4757; }
+  .key { background:#f0e9f8; color:#6a3093; font-family:'Courier New',monospace; font-size:16px; font-weight:800; padding:16px; border-radius:12px; text-align:center; margin:10px 0; word-break:break-all; letter-spacing:2px; border:2px dashed #6a3093; min-height:56px; display:flex; align-items:center; justify-content:center; }
+  .info { background:rgba(255,255,255,.1); padding:14px; border-radius:10px; font-size:12.5px; line-height:1.65; margin-top:14px; }
+  .info code { background:rgba(255,255,255,.2); padding:2px 6px; border-radius:4px; font-family:monospace; }
+  .tabs { display:flex; gap:4px; margin-bottom:14px; background:rgba(255,255,255,.15); padding:6px; border-radius:14px; }
+  .tabs button { flex:1; padding:10px 4px; background:transparent; border-radius:8px; font-size:11px; }
+  .tabs button.active { background:#fff; color:#4a2568; }
+  .pending-item { background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; font-size:12.5px; border-left:4px solid #ff9800; color:#333; }
+  .pending-item .row { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .pending-item .row strong { color:#6a3093; }
+  label { display:block; font-size:11px; font-weight:700; color:#666; margin:10px 0 4px; text-transform:uppercase; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Admin Panel</h1>
+    <div class="warn">PRIVATE — Never share this file</div>
+    <div class="tabs">
+      <button id="tabKey" class="active" onclick="switchTab('key')">Keys</button>
+      <button id="tabPay" onclick="switchTab('pay')">Pay</button>
+      <button id="tabHist" onclick="switchTab('hist')">History</button>
+      <button id="tabChat" onclick="switchTab('chat')">Chats <span id="chatTabBadge" style="background:#ff4757;color:#fff;border-radius:20px;padding:0 6px;font-size:10px;margin-left:4px;display:none;"></span></button>
+    </div>
+    <div class="card" id="paneKey">
+      <h2>🔑 Generate Key</h2>
+      <label>Device Hash</label>
+      <input type="text" id="deviceHash" class="hash-input" placeholder="XXXX" maxlength="4">
+      <button class="green" onclick="generateKey()">Generate Key</button>
+      <div class="key" id="out">—</div>
+      <button class="orange" onclick="copyKey()">📋 Copy Key</button>
+      <button class="red" onclick="genMaster()">Generate Master Key</button>
+    </div>
+    <div class="card" id="panePay" style="display:none;">
+      <h2>💰 Verify Payment & Activate User</h2>
+      <label>User Name</label><input type="text" id="payName" placeholder="Abel Tadesse">
+      <label>Phone</label><input type="tel" id="payPhone" placeholder="09xxxxxxxx">
+      <label>University</label><input type="text" id="payUni" placeholder="Arsi University">
+      <label>Stream</label><select id="payStream"><option value="">— Select —</option><option value="Natural">Natural</option><option value="Social">Social</option></select>
+      <label>Method</label><select id="payMethod"><option value="">— Select —</option><option>Telebirr</option><option>CBE Birr</option><option>Awash Bank</option><option>E-Birr</option></select>
+      <label>FT Number</label><input type="text" id="payFt" placeholder="FT24ABC123XYZ" style="text-transform:uppercase; font-family:monospace;">
+      <label>Device Hash</label><input type="text" id="payHash" class="hash-input" placeholder="XXXX" maxlength="4">
+      <button class="green" onclick="activateUserDirect()">⚡ ACTIVATE USER (no key needed)</button>
+      <div class="info" style="background:#e8f5e9; color:#2e7d32; margin-top:10px;">Admin activates directly — user's app auto-detects on next open.</div>
+      <div class="key" id="payOut">—</div>
+      <button class="orange" onclick="generateAndSavePaymentKey()">Or Generate Key Manually</button>
+      <button class="orange" onclick="copyPayKey()">📋 Copy Key</button>
+    </div>
+    <div class="card" id="paneHist" style="display:none;">
+      <h2>📜 Issued Keys</h2>
+      <div id="histList"></div>
+      <button class="red" onclick="clearHistory()" style="margin-top:10px;">Clear History</button>
+    </div>
+    <div class="card" id="paneChat" style="display:none;">
+      <h2>💬 User Chats</h2>
+      <div id="fbConfigBox" style="background:#fff3cd;padding:10px;border-radius:8px;font-size:12px;color:#856404;margin-bottom:12px;line-height:1.6;"><strong>Firebase not configured.</strong><br>Open app → My → Admin → ⚙️ App Settings → fill Firebase fields → Export Content JSON → paste to content.json → reopen this.</div>
+      <div id="chatThreadList"></div>
+      <div id="chatThreadView" style="display:none;">
+        <button onclick="closeThread()" style="margin-bottom:10px;padding:8px 14px;background:#eee;color:#333;border:none;border-radius:8px;font-weight:700;cursor:pointer;width:auto;">← Back</button>
+        <div id="threadHeader" style="background:#f7f7fa;padding:12px;border-radius:10px;font-size:12.5px;margin-bottom:10px;line-height:1.6;"></div>
+        <button onclick="activateFromThread()" class="green" style="margin-bottom:10px;">⚡ ACTIVATE THIS USER (1 year)</button>
+        <div id="threadMessages" style="background:#f7f7fa;border-radius:12px;padding:12px;min-height:280px;max-height:50vh;overflow-y:auto;"></div>
+        <div id="adminTyping" style="font-size:11.5px;color:#6a3093;font-weight:700;padding:6px 4px;min-height:14px;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="adminChatInput" placeholder="Reply…" style="flex:1;" oninput="adminTyping()" onkeydown="if(event.key==='Enter')sendAdminReply()">
+          <button onclick="sendAdminReply()" class="green" style="padding:12px 20px;width:auto;">Send</button>
+        </div>
+      </div>
+    </div>
+    <div class="info" style="text-align:center;"><strong>Owner:</strong> Osama Abdi · <strong>Price:</strong> 200 ETB<br>Telebirr: <code>0924956308</code></div>
+  </div>
+<script>
+const SECRET = "FreshmanHub2024EthiopiaSecretKey2024";
+const MASTER_KEY = "MASTER-UNBLOCK-ALL";
+const LS_KEY_HISTORY = 'fh_keygen_history';
+const LICENSE_DAYS = 365;
+
+function getFbConfig(){ try{ const s=JSON.parse(localStorage.getItem('fh_settings')||'{}'); return s.FIREBASE||null; }catch(e){ return null; } }
+let fbReady=false, fbDb=null, fbStorage=null, chatUnsub=null, currentThreadId=null, currentThreadData=null, adminTypingTimer=null;
+
+function initFirebase(){
+  const c=getFbConfig();
+  if(!c || !c.apiKey || !c.projectId){ const el=document.getElementById('fbConfigBox'); if(el) el.style.display='block'; return false; }
+  const el=document.getElementById('fbConfigBox'); if(el) el.style.display='none';
+  try{ if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(c); fbDb=firebase.firestore(); fbStorage=firebase.storage(); fbReady=true; return true; }catch(e){ console.error(e); return false; }
+}
+function listenAllThreads(){
+  if(!fbReady) return;
+  if(chatUnsub) chatUnsub();
+  chatUnsub=fbDb.collection('threads').orderBy('lastAt','desc').limit(100).onSnapshot(snap=>{
+    const arr=[]; snap.forEach(d=>arr.push({id:d.id,...d.data()})); renderThreadList(arr);
+    const totalUnread=arr.reduce((a,t)=>a+(t.unreadByAdmin||0),0);
+    const badge=document.getElementById('chatTabBadge');
+    if(totalUnread>0){ badge.textContent=totalUnread>9?'9+':totalUnread; badge.style.display='inline-block'; }
+    else badge.style.display='none';
+  });
+}
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function renderThreadList(threads){
+  const el=document.getElementById('chatThreadList');
+  if(!threads.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:#999;font-size:13px;">No chats yet.</div>'; return; }
+  el.innerHTML=threads.map(t=>{
+    const unread=t.unreadByAdmin||0;
+    const badge=unread?'<span style="background:#ff4757;color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:800;margin-left:6px;">'+unread+'</span>':'';
+    const paid = t.paid ? '<span style="background:#4caf50;color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:800;margin-left:6px;">PAID</span>' : '';
+    const time=t.lastAt?new Date(t.lastAt.toMillis?t.lastAt.toMillis():t.lastAt).toLocaleString():'';
+    return '<div onclick="openThread(\''+t.id+'\')" style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border-left:4px solid '+(unread?'#ff4757':'#6a3093')+';"><div style="font-weight:800;font-size:13.5px;color:#333;margin-bottom:4px;">'+escapeHtml(t.userName||'Unknown')+' '+badge+paid+'</div><div style="font-size:11.5px;color:#888;margin-bottom:4px;">'+escapeHtml(t.userPhone||'')+' · '+escapeHtml(t.university||'')+' · '+escapeHtml(t.stream||'')+'</div><div style="font-size:12px;color:#555;">'+escapeHtml((t.lastMessage||'').slice(0,60))+'</div><div style="font-size:10.5px;color:#aaa;margin-top:4px;">'+time+'</div></div>';
+  }).join('');
+}
+function openThread(id){
+  currentThreadId=id;
+  document.getElementById('chatThreadList').style.display='none';
+  document.getElementById('chatThreadView').style.display='block';
+  fbDb.collection('threads').doc(id).update({unreadByAdmin:0});
+  fbDb.collection('threads').doc(id).onSnapshot(snap=>{
+    if(!snap.exists) return;
+    currentThreadData=snap.data();
+    const t=currentThreadData;
+    document.getElementById('threadHeader').innerHTML='<strong>'+escapeHtml(t.userName||'Unknown')+'</strong><br>'+escapeHtml(t.userPhone||'')+' · '+escapeHtml(t.university||'')+' · '+escapeHtml(t.stream||'')+'<br><span style="font-family:monospace;font-size:11px;">Hash: '+escapeHtml(t.deviceHash||id)+'</span>'+(t.paid?'<br><span style="color:#2e7d32;font-weight:700;">✅ Activated until '+new Date(t.paidUntil||0).toLocaleDateString()+'</span>':'');
+    const typing=document.getElementById('adminTyping');
+    typing.textContent=t.userTyping?'User is typing…':'';
+  });
+  if(window._threadMsgUnsub) window._threadMsgUnsub();
+  window._threadMsgUnsub=fbDb.collection('threads').doc(id).collection('messages').orderBy('at','asc').limit(300).onSnapshot(snap=>{
+    const arr=[]; snap.forEach(d=>{ const x=d.data(); arr.push({id:d.id,...x,at:x.at?x.at.toMillis():Date.now()}); });
+    renderThreadMessages(arr);
+    const userUnread=arr.filter(m=>m.from==='user'&&!m.read);
+    if(userUnread.length){ const batch=fbDb.batch(); userUnread.forEach(m=>batch.update(fbDb.collection('threads').doc(id).collection('messages').doc(m.id),{read:true})); batch.commit(); }
+  });
+}
+function closeThread(){ if(window._threadMsgUnsub){ window._threadMsgUnsub(); window._threadMsgUnsub=null; } currentThreadId=null; document.getElementById('chatThreadView').style.display='none'; document.getElementById('chatThreadList').style.display='block'; }
+function renderThreadMessages(msgs){
+  const el=document.getElementById('threadMessages');
+  if(!msgs.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:#999;font-size:13px;">No messages yet.</div>'; return; }
+  el.innerHTML=msgs.map(m=>{ const bubble=m.imageUrl?'<img src="'+escapeHtml(m.imageUrl)+'" style="max-width:100%;border-radius:8px;display:block;margin-bottom:6px;" onclick="window.open(this.src,\'_blank\')">':''; const isUser=m.from==='user'; return '<div style="max-width:82%;padding:10px 14px;border-radius:14px;margin-bottom:8px;font-size:13.5px;line-height:1.5;word-wrap:break-word;'+(isUser?'background:#6a3093;color:#fff;margin-left:auto;border-bottom-right-radius:4px;':'background:#fff;color:#222;border:1px solid #e0e0e6;border-bottom-left-radius:4px;')+'">'+bubble+escapeHtml(m.text||'')+'<span style="font-size:10px;opacity:.7;margin-top:5px;display:block;">'+new Date(m.at).toLocaleString()+'</span></div>'; }).join('');
+  setTimeout(()=>{ el.scrollTop=el.scrollHeight; },30);
+}
+async function sendAdminReply(){
+  const inp=document.getElementById('adminChatInput'); const text=(inp.value||'').trim(); if(!text||!currentThreadId) return;
+  inp.value='';
+  await fbDb.collection('threads').doc(currentThreadId).collection('messages').add({from:'admin',text,imageUrl:'',at:firebase.firestore.FieldValue.serverTimestamp(),read:false});
+  await fbDb.collection('threads').doc(currentThreadId).update({lastMessage:text,lastAt:firebase.firestore.FieldValue.serverTimestamp(),lastFrom:'admin',unreadByUser:firebase.firestore.FieldValue.increment(1),adminTyping:false});
+}
+function adminTyping(){ if(!currentThreadId) return; fbDb.collection('threads').doc(currentThreadId).update({adminTyping:true}); clearTimeout(adminTypingTimer); adminTypingTimer=setTimeout(()=>{ if(currentThreadId) fbDb.collection('threads').doc(currentThreadId).update({adminTyping:false}); },1500); }
+
+async function activateDevice(hash){
+  if(!fbReady) return alert('Firebase not configured.');
+  if(!/^[A-Z0-9]{4}$/.test((hash||'').trim().toUpperCase())) return alert('Enter valid 4-char device hash');
+  const tid = hash.trim().toUpperCase();
+  const now = Date.now();
+  const paidUntil = now + LICENSE_DAYS*86400000;
+  try {
+    const ref = fbDb.collection('threads').doc(tid);
+    const snap = await ref.get();
+    if(!snap.exists){ await ref.set({deviceHash:tid,paid:true,paidAt:now,paidUntil:paidUntil,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); }
+    else { await ref.update({paid:true,paidAt:now,paidUntil:paidUntil}); }
+    alert('✅ Device '+tid+' activated for 1 year!');
+  } catch(e){ alert('Failed: '+e.message); }
+}
+async function activateUserDirect(){
+  const hash = document.getElementById('payHash').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{4}$/.test(hash)) return alert('Enter valid device hash (4 chars).');
+  const name = document.getElementById('payName').value.trim();
+  const phone = document.getElementById('payPhone').value.trim();
+  const uni = document.getElementById('payUni').value.trim();
+  const stream = document.getElementById('payStream').value;
+  const method = document.getElementById('payMethod').value;
+  const ft = document.getElementById('payFt').value.trim().toUpperCase();
+  if(!confirm('Activate device '+hash+' for 1 year?\n\nUser: '+(name||'-')+'\nPhone: '+(phone||'-'))) return;
+  await activateDevice(hash);
+  saveToHistory({type:'activation',name,phone,uni,stream,method,ft,deviceHash:hash,at:Date.now()});
+}
+async function activateFromThread(){
+  if(!currentThreadData || !currentThreadId) return;
+  if(!confirm('Activate device '+currentThreadId+' for 1 year?')) return;
+  await activateDevice(currentThreadId);
+}
+
+function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
+function switchTab(t){
+  ['Key','Pay','Hist','Chat'].forEach(x=>{ const el=document.getElementById('pane'+x); if(el) el.style.display = ((t==='key'&&x==='Key')||(t==='pay'&&x==='Pay')||(t==='hist'&&x==='Hist')||(t==='chat'&&x==='Chat'))?'block':'none'; });
+  document.getElementById('tabKey').classList.toggle('active',t==='key'); document.getElementById('tabPay').classList.toggle('active',t==='pay'); document.getElementById('tabHist').classList.toggle('active',t==='hist'); document.getElementById('tabChat').classList.toggle('active',t==='chat');
+  if(t==='hist') renderHistory();
+  if(t==='chat'){ if(initFirebase()) listenAllThreads(); }
+}
+function computeKey(dh){ dh=(dh||'').trim().toUpperCase(); if(!/^[A-Z0-9]{4}$/.test(dh)) return null; const rand=simpleHash(Date.now().toString()+Math.random()).slice(0,4).toUpperCase().padStart(4,'0'); const check=simpleHash(SECRET+dh+rand).slice(0,4).toUpperCase().padStart(4,'0'); return 'FH-'+dh+'-'+check+'-'+rand; }
+function generateKey(){ const dh=(document.getElementById('deviceHash').value||'').trim().toUpperCase(); if(!/^[A-Z0-9]{4}$/.test(dh)){ alert('Enter valid hash.'); return; } const key=computeKey(dh); document.getElementById('out').textContent=key; saveToHistory({type:'key',deviceHash:dh,key,at:Date.now()}); }
+function genMaster(){ if(!confirm('Generate MASTER key?')) return; document.getElementById('out').textContent=MASTER_KEY; saveToHistory({type:'master',key:MASTER_KEY,at:Date.now()}); }
+function copyKey(){ const t=document.getElementById('out').textContent; if(t==='—'||!t) return alert('Generate a key first!'); copyToClipboard(t); }
+function copyPayKey(){ const t=document.getElementById('payOut').textContent; if(t==='—'||!t) return alert('Generate a key first!'); copyToClipboard(t); }
+function copyToClipboard(t){ if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert('Copied:\n'+t)).catch(()=>fallbackCopy(t)); else fallbackCopy(t); }
+function fallbackCopy(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); alert('Copied:\n'+t); }catch(e){ alert('Key: '+t); } document.body.removeChild(ta); }
+function generateAndSavePaymentKey(){ const name=document.getElementById('payName').value.trim(); const phone=document.getElementById('payPhone').value.trim(); const uni=document.getElementById('payUni').value.trim(); const stream=document.getElementById('payStream').value; const method=document.getElementById('payMethod').value; const ft=document.getElementById('payFt').value.trim().toUpperCase(); const dh=document.getElementById('payHash').value.trim().toUpperCase(); if(!name) return alert('Enter name'); if(!/^(09|07)\d{8}$/.test(phone)) return alert('Enter valid phone'); if(!uni) return alert('Enter university'); if(!stream) return alert('Select stream'); if(!method) return alert('Select method'); if(!ft) return alert('Enter FT'); if(!/^[A-Z0-9]{4}$/.test(dh)) return alert('Enter valid hash'); const key=computeKey(dh); document.getElementById('payOut').textContent=key; saveToHistory({type:'payment',name,phone,uni,stream,method,ft,deviceHash:dh,key,at:Date.now()}); alert('Key issued for '+name+'\n\nKey: '+key); }
+function saveToHistory(entry){ try{ const h=JSON.parse(localStorage.getItem(LS_KEY_HISTORY)||'[]'); h.unshift(entry); localStorage.setItem(LS_KEY_HISTORY,JSON.stringify(h.slice(0,200))); }catch(e){} }
+function renderHistory(){ const el=document.getElementById('histList'); let h=[]; try{ h=JSON.parse(localStorage.getItem(LS_KEY_HISTORY)||'[]'); }catch(e){} if(!h.length){ el.innerHTML='<div style="text-align:center; padding:20px; color:#999; font-size:13px;">No keys issued yet.</div>'; return; } el.innerHTML=h.map(e=>{ if(e.type==='master'){ return '<div class="pending-item" style="border-left-color:#c62828;"><div class="row"><strong>MASTER</strong><span>'+new Date(e.at).toLocaleString()+'</span></div><div style="font-family:monospace;">'+e.key+'</div></div>'; } if(e.type==='activation'){ return '<div class="pending-item" style="border-left-color:#4caf50;"><div class="row"><strong>⚡ ACTIVATED '+escapeHtml(e.name||'-')+'</strong><span>'+new Date(e.at).toLocaleDateString()+'</span></div><div style="font-size:11.5px; color:#666;">'+escapeHtml(e.phone||'')+' · Hash '+escapeHtml(e.deviceHash)+'</div></div>'; } if(e.type==='payment'){ return '<div class="pending-item"><div class="row"><strong>'+escapeHtml(e.name)+'</strong><span>'+new Date(e.at).toLocaleDateString()+'</span></div><div style="font-size:11.5px; color:#666;">'+escapeHtml(e.phone)+' · '+escapeHtml(e.uni)+' · FT '+escapeHtml(e.ft)+'</div><div style="font-family:monospace; font-size:12px; background:#fff; padding:6px 10px; border-radius:6px; margin-top:4px;">'+e.key+'</div></div>'; } return '<div class="pending-item"><div class="row"><strong>Hash '+escapeHtml(e.deviceHash)+'</strong><span>'+new Date(e.at).toLocaleDateString()+'</span></div><div style="font-family:monospace; font-size:12px; background:#fff; padding:6px 10px; border-radius:6px;">'+e.key+'</div></div>'; }).join(''); }
+function clearHistory(){ if(!confirm('Clear all key history?')) return; localStorage.removeItem(LS_KEY_HISTORY); renderHistory(); }
+
+document.getElementById('deviceHash').addEventListener('keydown', e=>{ if(e.key==='Enter') generateKey(); });
+document.getElementById('payHash').addEventListener('keydown', e=>{ if(e.key==='Enter') activateUserDirect(); });
+(function(){ if(initFirebase()) listenAllThreads(); })();
+</script>
+</body>
+</html>
