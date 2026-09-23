@@ -1,35 +1,26 @@
 {
   "name": "Freshman Study Hub",
   "short_name": "Freshman Hub",
-  "description": "Study app for Ethiopian university freshmen",
-  "id": "/",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Complete study app for Ethiopian university freshmen. Books, notes, exams, and university info for every stream and semester.",
+  "id": "/Freshman-hub/",
+  "start_url": "/Freshman-hub/",
+  "scope": "/Freshman-hub/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
   "background_color": "#1e3c72",
   "theme_color": "#6a3093",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["education", "productivity"],
+  "categories": ["education", "productivity", "books"],
+  "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "./screenshot-1.jpg", "sizes": "1080x2340", "type": "image/jpeg", "form_factor": "narrow", "label": "Home — Book Library" },
+    { "src": "./screenshot-2.jpg", "sizes": "1080x2340", "type": "image/jpeg", "form_factor": "narrow", "label": "Exams and Practice" }
   ]
 }
