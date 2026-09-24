@@ -122,14 +122,6 @@
   .auth-choice button { padding:20px; font-size:15px; border-radius:14px; font-weight:800; }
   .chat-menu { position:fixed; bottom:100px; right:20px; z-index:9000; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
   .chat-fab { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#0088cc,#0066aa); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(0,136,204,.5); color:#fff; font-size:10px; font-weight:800; cursor:pointer; border:none; position:relative; }
-  .chat-menu-panel { background:#fff; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.25); overflow:hidden; display:none; min-width:220px; }
-  .chat-menu-panel.open { display:block; animation:slideUp .18s; }
-  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  .chat-menu-panel button { display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; border:none; background:#fff; cursor:pointer; font-size:13.5px; font-weight:700; color:#333; text-align:left; border-bottom:1px solid #eee; }
-  .chat-menu-panel button:last-child { border-bottom:none; }
-  .chat-menu-panel .ci { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
-  .chat-menu-panel .ci.p { background:#e3f2fd; }
-  .chat-menu-panel .ci.g { background:#e8f5e9; }
   .chat-screen { display:flex; flex-direction:column; height:60vh; min-height:340px; }
   .chat-list { flex:1; overflow-y:auto; padding:12px; background:#f7f7fa; border-radius:12px; margin-bottom:12px; }
   .chat-msg { max-width:82%; padding:10px 14px; border-radius:14px; margin-bottom:8px; font-size:13.5px; line-height:1.5; word-wrap:break-word; }
@@ -177,8 +169,6 @@
   body.dark .review-item .ra { color:#b0b0b0; }
   body.dark .empty-msg { color:#666; }
   body.dark .chapter-tag { background:#0f2a0f; color:#7ed87e; }
-  body.dark .chat-menu-panel { background:#1e1e34; }
-  body.dark .chat-menu-panel button { background:#1e1e34; color:#e0e0e0; border-bottom-color:#2a2a44; }
   body.dark .chat-list { background:#0f0f1e; }
   body.dark .chat-msg.admin { background:#20203a; color:#e0e0e0; border-color:#333; }
   body.dark .chat-input-row input { background:#0f0f1e; color:#e0e0e0; border-color:#333; }
@@ -195,7 +185,7 @@
 <div class="container" id="app"></div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const DEFAULT_CONFIG = {
   TRIAL_DAYS: 3, LICENSE_DAYS: 365, SESSION_DAYS: 365, PRICE_BIRR: 200, OWNER_NAME: "Osama Abdi",
@@ -228,7 +218,8 @@ const LS_SETTINGS='fh_settings', LS_USERS='fh_users', LS_CURRENT_USER='fh_curren
       LS_LICENSE_ACTIVATED='fh_license_activated', LS_REGISTERED_PHONES='fh_registered_phones',
       LS_ADMIN_ACTIVATED='fh_admin_activated', LS_ADMIN_ACTIVATED_AT='fh_admin_activated_at',
       LS_BOOK_ZOOM='fh_book_zoom', LS_NOTE_ZOOM='fh_note_zoom',
-      LS_GENERAL_SUBJECTS='fh_general_subjects', LS_ADMIN_KEYS='fh_admin_keys';
+      LS_GENERAL_SUBJECTS='fh_general_subjects', LS_ADMIN_KEYS='fh_admin_keys',
+      LS_ACT_PHONE='fh_activated_phone';
 
 function getSettings(){ try { return { ...DEFAULT_CONFIG, ...(JSON.parse(localStorage.getItem(LS_SETTINGS)||'{}')) }; } catch(e){ return { ...DEFAULT_CONFIG }; } }
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
@@ -346,17 +337,19 @@ function adminRemoveUsedPhone(phone){ const n=String(phone).replace(/[^\d]/g,'')
 function isValidLicenseKey(key){ if(!key||typeof key!=='string') return false; const c=key.trim().toUpperCase(); if(!/^FH-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(c)) return false; const p=c.split('-'); const expected=simpleHash(CONFIG.SECRET+p[1]+p[3]).slice(0,4).toUpperCase().padStart(4,'0'); return p[2]===expected; }
 function isMasterKey(key){ return (key||'').trim().toUpperCase()==='MASTER-UNBLOCK-ALL'; }
 function isLicenseForThisDevice(key){ try{ return key.split('-')[1]===getDeviceHash(); }catch(e){ return false; } }
-function tryActivateLicense(key){ const c=(key||'').trim().toUpperCase(); if(!c) return {ok:false,reason:'empty'}; if(isMasterKey(c)){ setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); resetKeyAttempts(); return {ok:true,master:true}; } if(!isValidLicenseKey(c)) return {ok:false,reason:'invalid'}; if(!isLicenseForThisDevice(c)){ const r=registerWrongKey(); if(r.blocked) return {ok:false,reason:'blocked',blockCount:r.blockCount}; return {ok:false,reason:'wrong-device',remaining:r.remaining}; } setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); resetKeyAttempts(); return {ok:true}; }
+function tryActivateLicense(key){ const c=(key||'').trim().toUpperCase(); if(!c) return {ok:false,reason:'empty'}; const curPhone=getCurrentUserPhone()||''; if(isMasterKey(c)){ setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); if(curPhone) localStorage.setItem(LS_ACT_PHONE,curPhone); resetKeyAttempts(); return {ok:true,master:true}; } if(!isValidLicenseKey(c)) return {ok:false,reason:'invalid'}; if(!isLicenseForThisDevice(c)){ const r=registerWrongKey(); if(r.blocked) return {ok:false,reason:'blocked',blockCount:r.blockCount}; return {ok:false,reason:'wrong-device',remaining:r.remaining}; } setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); if(curPhone) localStorage.setItem(LS_ACT_PHONE,curPhone); resetKeyAttempts(); return {ok:true}; }
 function checkAccess(){
   if(isAdminMode()) return { status:'licensed', daysLeft:9999, master:true, admin:true };
-  if(localStorage.getItem(LS_ADMIN_ACTIVATED)==='1'){ const act = parseInt(localStorage.getItem(LS_ADMIN_ACTIVATED_AT)||'0'); if(act){ const end = act + CONFIG.LICENSE_DAYS*86400000; if(Date.now() < end) return { status:'licensed', daysLeft: Math.ceil((end-Date.now())/86400000), source:'admin' }; } }
-  const l=localStorage.getItem(LS_LICENSE);
+  const curPhone = getCurrentUserPhone();
+  const actPhone = localStorage.getItem(LS_ACT_PHONE) || '';
+  const samePhone = !!curPhone && String(curPhone).replace(/[^\d]/g,'') === String(actPhone).replace(/[^\d]/g,'');
+  if(samePhone && localStorage.getItem(LS_ADMIN_ACTIVATED)==='1'){ const act = parseInt(localStorage.getItem(LS_ADMIN_ACTIVATED_AT)||'0'); if(act){ const end = act + CONFIG.LICENSE_DAYS*86400000; if(Date.now() < end) return { status:'licensed', daysLeft: Math.ceil((end-Date.now())/86400000), source:'admin' }; } }
+  const l = samePhone ? localStorage.getItem(LS_LICENSE) : null;
   if(l && isMasterKey(l)) return {status:'licensed',daysLeft:9999,master:true};
   if(l && isValidLicenseKey(l)){ let activated=parseInt(localStorage.getItem(LS_LICENSE_ACTIVATED)||'0'); if(!activated){ activated=Date.now(); localStorage.setItem(LS_LICENSE_ACTIVATED,String(activated)); } const end=activated+CONFIG.LICENSE_DAYS*86400000; const now=Date.now(); if(now>=end) return {status:'expired',reason:'license-expired'}; return {status:'licensed',daysLeft:Math.ceil((end-now)/86400000)}; }
   const u=getCurrentUser(); let fr=u&&u.createdAt?u.createdAt:parseInt(localStorage.getItem(LS_FIRST_RUN)||'0'); if(!fr){ fr=Date.now(); localStorage.setItem(LS_FIRST_RUN,fr.toString()); } const end=fr+CONFIG.TRIAL_DAYS*86400000; const now=Date.now(); if(now>=end) return {status:'expired',reason:'trial-ended'}; return {status:'trial',daysLeft:Math.ceil((end-now)/86400000)};
 }
 
-/* ===== TRIAL HELPERS ===== */
 function isTrialContentAllowed(kind){
   const a = checkAccess();
   if(a.status !== 'trial') return true;
@@ -393,7 +386,23 @@ const EMBEDDED_CONTENT = {};
 const META_KEYS = new Set(['_blacklist','blacklist','notifications','tutorials','users','settings','registeredPhones','universityInfo','generalSubjects','version','updated']);
 
 function normalizeLibrary(lib){ if(!lib||typeof lib!=='object') return {}; const out={}; Object.keys(lib).forEach(uni=>{ if(META_KEYS.has(uni)) return; out[uni]={}; CONFIG.STREAMS.forEach(stream=>{ const s=(lib[uni]&&lib[uni][stream])||null; if(!s){ out[uni][stream]={"1":{pdfs:[],notes:[],exams:[]},"2":{pdfs:[],notes:[],exams:[]}}; return; } if(s.pdfs||s.notes||s.exams){ out[uni][stream]={"1":{pdfs:s.pdfs||[],notes:s.notes||[],exams:s.exams||[]},"2":{pdfs:[],notes:[],exams:[]}}; } else { out[uni][stream]={"1":s["1"]||{pdfs:[],notes:[],exams:[]},"2":s["2"]||{pdfs:[],notes:[],exams:[]}}; } }); }); return out; }
-function getContentLibrary(){ try{ const d=JSON.parse(localStorage.getItem(LS_CONTENT_DRAFT)||'null'); if(d&&Object.keys(d).length) return normalizeLibrary(d); }catch(e){} try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(s){ const clean={...s}; META_KEYS.forEach(k=>{ delete clean[k]; }); if(Object.keys(clean).length) return normalizeLibrary(clean); } }catch(e){} return normalizeLibrary(EMBEDDED_CONTENT); }
+function getContentLibrary(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LS_CONTENT_DRAFT) || 'null');
+    if(d && Object.keys(d).length) return normalizeLibrary(d);
+  }catch(e){}
+  try{
+    const s = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || 'null');
+    if(s){
+      const src = (s.universities && typeof s.universities === 'object')
+        ? { ...s.universities }
+        : { ...s };
+      META_KEYS.forEach(k => { delete src[k]; });
+      if(Object.keys(src).length) return normalizeLibrary(src);
+    }
+  }catch(e){}
+  return normalizeLibrary(EMBEDDED_CONTENT);
+}
 function saveContentLibrary(l){ localStorage.setItem(LS_CONTENT_DRAFT,JSON.stringify(l)); }
 function getUniContent(u,stream,semester){ const lib=getContentLibrary(); const s=String(semester); if(!lib[u]||!lib[u][stream]) return {pdfs:[],notes:[],exams:[]}; return lib[u][stream][s]||{pdfs:[],notes:[],exams:[]}; }
 function setUniContent(u,stream,semester,c){ const lib=getContentLibrary(); if(!lib[u]) lib[u]={}; if(!lib[u][stream]) lib[u][stream]={"1":{pdfs:[],notes:[],exams:[]},"2":{pdfs:[],notes:[],exams:[]}}; lib[u][stream][String(semester)]=c; saveContentLibrary(lib); }
@@ -407,7 +416,44 @@ function getSeenNotifs(){ try{ return JSON.parse(localStorage.getItem(LS_SEEN_NO
 function markNotifSeen(id){ const s=getSeenNotifs(); if(!s.includes(id)){ s.push(id); localStorage.setItem(LS_SEEN_NOTIFS,JSON.stringify(s)); } }
 function unreadNotifCount(){ const seen=getSeenNotifs(); return getMyNotifications().filter(n=>!seen.includes(n.id)).length; }
 
-async function syncRemoteContent(){ if(!CONFIG.CONTENT_URL) return; try{ const url=CONFIG.CONTENT_URL.replace(/\/+$/,'')+'/content.json?t='+Date.now(); const res=await fetch(url,{cache:'no-store'}); if(!res.ok) throw new Error('HTTP '+res.status); const remote=await res.json(); if(!remote) return; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(remote)); localStorage.setItem(LS_SYNCED_VERSION,String(remote.version||'1')); localStorage.setItem(LS_SYNCED_UPDATED,String(remote.updated||'')); if(remote.tutorials) saveTutorials(remote.tutorials); if(remote.universityInfo && typeof remote.universityInfo==='object') localStorage.setItem(LS_UNI_INFO, JSON.stringify(remote.universityInfo)); if(remote.generalSubjects && typeof remote.generalSubjects==='object') localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(remote.generalSubjects)); if(remote.settings){ const cur=getSettings(); const remoteEdited=remote.settings._adminEdited||0; const localEdited=cur._adminEdited||0; if(remoteEdited>localEdited){ saveSettings({...cur,...remote.settings}); reloadConfig(); initFirebase(); } } console.log('Synced v'+(remote.version||1)); }catch(e){ console.log('Offline'); } }
+async function syncRemoteContent(){
+  if(!CONFIG.CONTENT_URL) return;
+  const base = CONFIG.CONTENT_URL.replace(/\/+$/,'');
+  const localVersion = localStorage.getItem(LS_SYNCED_VERSION) || '0';
+  let remoteVersion = null;
+  try {
+    const vRes = await fetch(base + '/version.json?t=' + Date.now(), { cache:'no-store' });
+    if (vRes.ok) {
+      const vData = await vRes.json();
+      remoteVersion = String(vData.version || '1');
+      if (remoteVersion === localVersion && localStorage.getItem(LS_SYNCED_CONTENT)) {
+        console.log('Content up to date (v' + localVersion + ')');
+        return;
+      }
+    }
+  } catch(e){}
+  try {
+    const res = await fetch(base + '/content.json?t=' + Date.now(), { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const remote = await res.json();
+    if (!remote) return;
+    localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
+    localStorage.setItem(LS_SYNCED_VERSION, remoteVersion || String(remote.version || '1'));
+    localStorage.setItem(LS_SYNCED_UPDATED, String(remote.updated || ''));
+    if (remote.tutorials) saveTutorials(remote.tutorials);
+    if (remote.universityInfo && typeof remote.universityInfo === 'object')
+      localStorage.setItem(LS_UNI_INFO, JSON.stringify(remote.universityInfo));
+    if (remote.generalSubjects && typeof remote.generalSubjects === 'object')
+      localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(remote.generalSubjects));
+    if (remote.settings){
+      const cur = getSettings();
+      const remoteEdited = remote.settings._adminEdited || 0;
+      const localEdited = cur._adminEdited || 0;
+      if (remoteEdited > localEdited){ saveSettings({...cur, ...remote.settings}); reloadConfig(); }
+    }
+    console.log('Synced v' + (remoteVersion || remote.version || 1));
+  } catch(e){ console.log('Offline'); }
+}
 
 function getClosureDate(y){ const ec=y-7; const l=(ec%4)===3; return new Date(y,8,l?6:5); }
 function isClosureDay(){ const n=new Date(), c=getClosureDate(n.getFullYear()); return n.getFullYear()===c.getFullYear()&&n.getMonth()===c.getMonth()&&n.getDate()===c.getDate(); }
@@ -466,36 +512,17 @@ document.addEventListener('contextmenu',e=>{ if(!isScreenshotAllowed()) e.preven
 
 const _navStack = [];
 let _navSilent = false;
-let _snapLock = false;
 let _navReady = false;
 let _viewerState = null;
+let _lastBaseTab = 'book';
+const BASE_TABS = { book:1, note:1, exam:1, university:1, my:1 };
 
 function _takeSnapshot() {
   if (!_navReady) return;
   if (_navSilent) return;
-  if (_snapLock) return;
-  if (currentScreen === 'home') return;
-  _snapLock = true;
-  setTimeout(()=>{ _snapLock = false; }, 60);
-  const isViewer = (currentScreen === 'book-viewer' || currentScreen === 'note-viewer');
-  const snap = {
-    tab: currentTab, screen: currentScreen,
-    bookUni: (document.getElementById('bookUniSelect')||{}).value || '',
-    noteUni: (document.getElementById('noteUniSelect')||{}).value || '',
-    examUni: (document.getElementById('examUniSelect')||{}).value || '',
-    uniInfoUni: (document.getElementById('uniInfoSelect')||{}).value || '',
-    viewer: isViewer ? _viewerState : null,
-    quiz: (quizState && quizState.timerId) ? {
-      subjectName: quizState.subjectName, rawQuestions: quizState.rawQuestions,
-      timeMinutes: quizState.timeMinutes, index: quizState.index,
-      answers: [...(quizState.answers||[])], revealed: {...(quizState.revealed||{})},
-      skipped: [...(quizState.skipped||[])], seconds: quizState.seconds,
-      examSecondsLeft: quizState.examSecondsLeft, examSecondsElapsed: quizState.examSecondsElapsed
-    } : null,
-    scroll: window.scrollY || 0
-  };
-  _navStack.push(snap);
-  try { history.pushState({ n: _navStack.length }, ''); } catch(e){}
+  if (_navStack.length > 0) return;
+  _navStack.push(1);
+  try { history.pushState({ n: 1 }, ''); } catch(e){}
 }
 
 function _startQuizTimer(totalSeconds) {
@@ -525,7 +552,7 @@ function _renderBookViewerDirect(){
   if(!p || !p.url){ _viewerState = null; setScreen('book'); renderBooksHome(); return; }
   setScreen('book-viewer');
   const z = getBookZoom();
-  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="bookZoomWrap" style="zoom:'+z+'; transform:scale('+z+'); transform-origin: top left; width:'+(100/z)+'%;"><iframe src="'+escapeAttr(p.url)+'" loading="lazy" referrerpolicy="no-referrer"></iframe></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
+  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="bookZoomWrap" style="width:100%;"><iframe src="'+escapeAttr(p.url)+'" loading="lazy" referrerpolicy="no-referrer"></iframe></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
 }
 
 function _renderNoteViewerDirect(){
@@ -540,72 +567,27 @@ function _renderNoteViewerDirect(){
   app.innerHTML = renderHeader('note')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(n.title)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()-0.25)" title="Zoom out">A−</button><span class="zoom-pct" id="noteZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()+0.25)" title="Zoom in">A+</button><button class="zoom-btn" onclick="setNoteZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="noteZoomBody" class="viewer-note-body" style="font-size:'+(15*z)+'px;"><p style="color:#777; font-size:.85em; margin-bottom:14px;">'+escapeHtml(v.uni)+' · '+escapeHtml(v.stream)+' · Sem '+v.sem+'</p>'+(n.body||'')+'</div></div>'+(attach ? '<div style="margin-top:12px;">'+attach+'</div>' : '')+'<div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Use A+ / A− to change text size. Tap "⟲" to reset.</div>'+renderBottomNav('note')+renderChatFab();
 }
 
-function _restoreSnapshot(snap) {
-  _navSilent = true;
-  try {
-    if (quizState.timerId && snap.screen !== 'quiz') { clearInterval(quizState.timerId); quizState = {}; }
-    currentTab = snap.tab || 'book';
-    const restoreUni = (sel, uni, fn) => { if (!uni) return; setTimeout(()=>{ const el = document.getElementById(sel); if (el) { el.value = uni; fn(uni); } }, 40); };
-    switch(snap.screen) {
-      case 'quiz':
-        if (snap.quiz) {
-          quizState = { subjectName: snap.quiz.subjectName, rawQuestions: snap.quiz.rawQuestions, timeMinutes: snap.quiz.timeMinutes,
-            questions: prepareQuestions(snap.quiz.rawQuestions), index: snap.quiz.index, answers: snap.quiz.answers.slice(),
-            revealed: {...snap.quiz.revealed}, skipped: new Set(snap.quiz.skipped), seconds: snap.quiz.seconds,
-            examSecondsLeft: snap.quiz.examSecondsLeft, examSecondsElapsed: snap.quiz.examSecondsElapsed, timerId: null };
-          setScreen('quiz'); renderQuizScreen();
-          _startQuizTimer(snap.quiz.timeMinutes > 0 ? snap.quiz.timeMinutes * 60 : 0);
-          break;
-        }
-        setScreen('exam-home'); renderExamHome(); break;
-      case 'exam-home': setScreen('exam-home'); renderExamHome(); restoreUni('examUniSelect', snap.examUni, renderExamList); break;
-      case 'book': _viewerState = null; setScreen('book'); renderBooksHome(); restoreUni('bookUniSelect', snap.bookUni, renderBookList); break;
-      case 'note': _viewerState = null; setScreen('note'); renderNotesHome(); restoreUni('noteUniSelect', snap.noteUni, renderNoteList); break;
-      case 'book-viewer':
-        if (snap.viewer && snap.viewer.type === 'book') { _viewerState = snap.viewer; _renderBookViewerDirect(); }
-        else { _viewerState = null; setScreen('book'); renderBooksHome(); restoreUni('bookUniSelect', snap.bookUni, renderBookList); }
-        break;
-      case 'note-viewer':
-        if (snap.viewer && snap.viewer.type === 'note') { _viewerState = snap.viewer; _renderNoteViewerDirect(); }
-        else { _viewerState = null; setScreen('note'); renderNotesHome(); restoreUni('noteUniSelect', snap.noteUni, renderNoteList); }
-        break;
-      case 'university-info': setScreen('university-info'); renderUniversityInfo(); restoreUni('uniInfoSelect', snap.uniInfoUni, renderSelectedUniInfo); break;
-      case 'my': setScreen('my'); renderMy(); break;
-      case 'progress': setScreen('my'); renderProgress(); break;
-      case 'semester': setScreen('semester'); renderSemesterPicker(snap.tab); break;
-      case 'payment': renderPaymentFlow(snap.tab); break;
-      case 'pending': renderPendingScreen(snap.tab); break;
-      case 'enter-key': renderEnterKey(); break;
-      case 'chat': renderChatScreen(); break;
-      case 'auth': setScreen('my'); renderMy(); break;
-      case 'admin-settings': setScreen('my'); isAdminMode()?renderAdminSettings():renderMy(); break;
-      case 'admin-activate': setScreen('my'); isAdminMode()?renderAdminActivateUser():renderMy(); break;
-      case 'admin-users': setScreen('my'); isAdminMode()?renderAdminUsers():renderMy(); break;
-      case 'admin-user-editor': setScreen('my'); isAdminMode()?renderAdminUserEditor():renderMy(); break;
-      case 'admin-content': setScreen('my'); isAdminMode()?renderAdminContentManager(snap.tab||'exam'):renderMy(); break;
-      case 'admin-bulk': setScreen('my'); isAdminMode()?renderAdminBulkAdd():renderMy(); break;
-      case 'admin-tutorials': setScreen('my'); isAdminMode()?renderAdminTutorials():renderMy(); break;
-      case 'admin-notifications': setScreen('my'); isAdminMode()?renderAdminNotifications():renderMy(); break;
-      case 'admin-phones': setScreen('my'); isAdminMode()?renderAdminRegisteredPhones():renderMy(); break;
-      case 'admin-stats': setScreen('my'); isAdminMode()?renderAdminStats():renderMy(); break;
-      case 'admin-general-exams': setScreen('my'); isAdminMode()?renderAdminGeneralExams():renderMy(); break;
-      default: if (snap.tab && snap.tab !== 'book') { try { switchTab(snap.tab); } catch(e){ renderBooksHome(); } } else renderBooksHome();
-    }
-    window.scrollTo(0, snap.scroll || 0);
-  } finally { setTimeout(()=>{ _navSilent = false; }, 80); }
-}
-
 window.addEventListener('popstate', () => {
   if (!_navReady) return;
   if (_navStack.length === 0) return;
-  const snap = _navStack.pop();
-  _restoreSnapshot(snap);
+  _navStack.length = 0;
+  _navSilent = true;
+  try {
+    if (quizState.timerId) { clearInterval(quizState.timerId); quizState = {}; }
+    _viewerState = null;
+    const target = (isSignedIn() && hasActiveSession())
+      ? (BASE_TABS[_lastBaseTab] ? _lastBaseTab : 'book')
+      : 'my';
+    switchTab(target);
+  } finally {
+    try { history.replaceState({ n: 0 }, ''); } catch(e){}
+    setTimeout(() => { _navSilent = false; }, 120);
+  }
 });
 
 function goBack() {
-  if (_navStack.length > 0) { history.back(); return; }
+  if (_navStack.length > 0) { try { history.back(); } catch(e){} return; }
   if (isAdminMode()) { renderMy(); return; }
-  switchTab('book');
 }
 
 function showPostAuthWarning(callback){
@@ -641,41 +623,14 @@ function renderBottomNav(activeTab){
   return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.ico+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
 function renderChatFab(){
-  const groupBtn = CONFIG.SUPPORT_GROUP ? '<button onclick="openSupportGroup()"><div class="ci g">👥</div>Support Group</button>' : '';
-  return '<div class="chat-menu" id="chatMenu"><div class="chat-menu-panel" id="chatMenuPanel"><button onclick="openAdminChat()"><div class="ci p">💬</div>Message Admin</button>'+groupBtn+'</div><button class="chat-fab" id="chatFabBtn" onclick="toggleChatMenu()">CHAT</button></div>';
+  const tg = (CONFIG.TELEGRAM_USERNAME || '').trim();
+  const group = (CONFIG.SUPPORT_GROUP || '').trim();
+  const link = group
+    ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,''))
+    : (tg ? 'https://t.me/' + tg : '#');
+  return '<div class="chat-menu"><a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="chat-fab" style="text-decoration:none;color:#fff;">CHAT</a></div>';
 }
-function toggleChatMenu(){ const p=document.getElementById('chatMenuPanel'); if(p) p.classList.toggle('open'); }
-function openAdminChat(){ const p=document.getElementById('chatMenuPanel'); if(p) p.classList.remove('open'); renderChatScreen(); }
 function openSupportGroup(){ const g=(CONFIG.SUPPORT_GROUP||'').trim(); if(!g) return alert('Support group not configured. Contact admin.'); let url=g; if(!/^https?:\/\//i.test(url)) url='https://t.me/'+url.replace(/^@/,''); window.open(url,'_blank'); }
-
-let fbReady = false, fbDb = null, fbStorage = null;
-let chatUnsub = null, typingTimer = null, currentChatMsgs = [];
-function initFirebase(){ const c=CONFIG.FIREBASE||{}; if(!c.apiKey||!c.projectId){ fbReady=false; return false; } try{ if(!firebase.apps||!firebase.apps.length) firebase.initializeApp(c); fbDb=firebase.firestore(); fbStorage=firebase.storage(); fbReady=true; return true; }catch(e){ console.error('Firebase init failed',e); fbReady=false; return false; } }
-function fbThreadId(){ return getDeviceHash(); }
-async function fbEnsureThread(){ if(!fbReady) return; const tid=fbThreadId(); const ref=fbDb.collection('threads').doc(tid); const snap=await ref.get(); const u=getCurrentUser(); if(!snap.exists){ await ref.set({deviceHash:tid,userName:(u&&u.name)||'Unknown',userPhone:(u&&u.phone)||'',university:(u&&u.university)||'',stream:(u&&u.stream)||'',createdAt:firebase.firestore.FieldValue.serverTimestamp(),unreadByAdmin:0,unreadByUser:0,lastMessage:'',lastFrom:'',userTyping:false,adminTyping:false}); } else { await ref.update({userName:(u&&u.name)||'Unknown',userPhone:(u&&u.phone)||'',university:(u&&u.university)||'',stream:(u&&u.stream)||''}); } }
-async function fbPushMessage(from,text,imageUrl){ if(!fbReady) return false; await fbEnsureThread(); const tid=fbThreadId(); const ref=fbDb.collection('threads').doc(tid); await ref.collection('messages').add({from,text:text||'',imageUrl:imageUrl||'',at:firebase.firestore.FieldValue.serverTimestamp(),read:false}); const incField=from==='user'?'unreadByAdmin':'unreadByUser'; const upd={lastMessage:text||(imageUrl?'[image]':''),lastAt:firebase.firestore.FieldValue.serverTimestamp(),lastFrom:from}; upd[incField]=firebase.firestore.FieldValue.increment(1); upd[from==='user'?'adminTyping':'userTyping']=false; await ref.update(upd); return true; }
-function fbListenMessages(cb){ if(!fbReady) return; if(chatUnsub) chatUnsub(); const tid=fbThreadId(); chatUnsub=fbDb.collection('threads').doc(tid).collection('messages').orderBy('at','asc').limit(300).onSnapshot(snap=>{ const arr=[]; snap.forEach(d=>{ const x=d.data(); arr.push({id:d.id,from:x.from,text:x.text,imageUrl:x.imageUrl,read:!!x.read,at:x.at?x.at.toMillis():Date.now()}); }); cb(arr); },err=>console.warn('Listen error',err)); }
-function fbListenThreadMeta(cb){ if(!fbReady) return; const tid=fbThreadId(); fbDb.collection('threads').doc(tid).onSnapshot(snap=>{ if(!snap.exists) return; cb(snap.data()); }); }
-async function fbMarkUserRead(){ if(!fbReady) return; const tid=fbThreadId(); const ref=fbDb.collection('threads').doc(tid); await ref.update({unreadByUser:0}); const snap=await ref.collection('messages').where('from','==','admin').where('read','==',false).get(); if(snap.empty) return; const batch=fbDb.batch(); snap.forEach(d=>batch.update(d.ref,{read:true})); await batch.commit(); }
-async function fbSetTyping(who,isTyping){ if(!fbReady) return; const tid=fbThreadId(); const field=who==='user'?'userTyping':'adminTyping'; try{ await fbDb.collection('threads').doc(tid).update({[field]:isTyping}); }catch(e){} }
-async function fbUploadImage(file){ if(!fbReady||!fbStorage) throw new Error('Storage unavailable'); const tid=fbThreadId(); const path='chat/'+tid+'/'+Date.now()+'_'+(file.name||'img').replace(/[^\w.\-]/g,'_'); const ref=fbStorage.ref(path); await ref.put(file); return await ref.getDownloadURL(); }
-async function fbThreadUnreadCount(){ if(!fbReady) return 0; try{ const tid=fbThreadId(); const snap=await fbDb.collection('threads').doc(tid).get(); if(!snap.exists) return 0; return snap.data().unreadByUser||0; }catch(e){ return 0; } }
-async function adminUploadContentFile(file,uni,stream,sem,type){ if(!fbReady||!fbStorage) throw new Error('Firebase not configured'); if(!file) throw new Error('No file'); if(file.size>30*1024*1024) throw new Error('Max 30MB'); const safe=(file.name||'file').replace(/[^\w.\-]/g,'_'); const path='content/'+uni.replace(/[^\w]/g,'_')+'/'+stream+'/'+sem+'/'+type+'/'+Date.now()+'_'+safe; const ref=fbStorage.ref(path); await ref.put(file); return await ref.getDownloadURL(); }
-async function checkRemoteActivation(){ if(!fbReady) return; const u=getCurrentUser(); if(!u) return; try { const tid=getDeviceHash(); const snap=await fbDb.collection('threads').doc(tid).get(); if(!snap.exists) return; const data=snap.data(); if(data.paid===true && data.paidUntil && data.paidUntil>Date.now()){ localStorage.setItem(LS_ADMIN_ACTIVATED,'1'); localStorage.setItem(LS_ADMIN_ACTIVATED_AT,String(data.paidAt||Date.now())); } } catch(e){} }
-
-function renderChatScreen(){
-  _takeSnapshot();
-  saveScrollNow(); setScreen('chat');
-  if(!fbReady){ app.innerHTML = renderHeader(currentTab)+'<div class="panel"><h2>Chat Unavailable</h2><p style="color:#888; font-size:13px; line-height:1.7;">Firebase not configured. Ask admin to paste Firebase config in App Settings.</p></div>'+renderBottomNav(currentTab)+renderChatFab(); return; }
-  app.innerHTML = renderHeader(currentTab)+'<div class="panel"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h2 style="margin:0;">Message Admin</h2><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">Back</button></div><div class="chat-screen"><div class="chat-list" id="chatList"><div class="empty-msg">Loading…</div></div><div id="chatTyping" style="font-size:11.5px; color:#6a3093; font-weight:700; padding:0 4px 6px; min-height:16px;"></div><div class="chat-input-row"><button onclick="document.getElementById(\'chatImgInput\').click()" style="padding:12px 14px; background:#eee; color:#333; border:none; border-radius:10px; cursor:pointer; font-size:16px;">📎</button><input type="text" id="chatInput" placeholder="Type a message..." oninput="handleUserTyping()" onkeydown="if(event.key===\'Enter\')sendChatMessage()"><button onclick="sendChatMessage()">Send</button></div><input type="file" id="chatImgInput" accept="image/*" onchange="handleChatImage(this)"><div id="chatImgStatus" style="font-size:11.5px; color:#6a3093; padding:6px 4px; min-height:14px;"></div></div></div>'+renderBottomNav(currentTab)+renderChatFab();
-  fbEnsureThread().then(()=>{ fbListenMessages(renderChatMessages); fbListenThreadMeta(meta=>{ const el=document.getElementById('chatTyping'); if(el) el.textContent = meta.adminTyping ? 'Admin is typing…' : ''; }); fbMarkUserRead(); });
-}
-function renderChatMessages(msgs){ currentChatMsgs=msgs; const el=document.getElementById('chatList'); if(!el) return; if(!msgs.length){ el.innerHTML='<div class="empty-msg">No messages yet. Say hello 👋</div>'; return; } el.innerHTML=msgs.map(m=>{ const bubble=m.imageUrl?'<img src="'+escapeAttr(m.imageUrl)+'" style="max-width:100%; border-radius:8px; display:block; margin-bottom:6px;" onclick="window.open(this.src,\'_blank\')">':''; const read=m.from==='user'?(m.read?' ✓✓':' ✓'):''; return '<div class="chat-msg '+(m.from==='admin'?'admin':'user')+'">'+bubble+(m.text?escapeHtml(m.text):'')+read+'<span class="ts">'+new Date(m.at).toLocaleString()+'</span></div>'; }).join(''); setTimeout(()=>{ el.scrollTop=el.scrollHeight; },30); }
-function handleUserTyping(){ fbSetTyping('user',true); clearTimeout(typingTimer); typingTimer=setTimeout(()=>fbSetTyping('user',false),1500); }
-async function handleChatImage(inp){ const f=inp.files[0]; if(!f) return; const status=document.getElementById('chatImgStatus'); if(!f.type.startsWith('image/')){ status.textContent='Must be an image'; return; } if(f.size>5*1024*1024){ status.textContent='Max 5MB'; return; } status.textContent='Uploading…'; try{ const url=await fbUploadImage(f); await fbPushMessage('user','',url); status.textContent='Sent ✓'; setTimeout(()=>status.textContent='',1500); }catch(e){ status.textContent='Upload failed'; } inp.value=''; }
-async function sendChatMessage(){ const inp=document.getElementById('chatInput'); if(!inp) return; const text=(inp.value||'').trim(); if(!text) return; if(!fbReady){ alert('Chat unavailable'); return; } inp.value=''; fbSetTyping('user',false); try{ await fbPushMessage(isAdminMode()?'admin':'user',text); }catch(e){ alert('Send failed'); } }
-async function refreshChatBadge(){ if(!fbReady) return; try{ const n=await fbThreadUnreadCount(); const btn=document.getElementById('chatFabBtn'); if(!btn) return; if(n>0){ let badge=document.getElementById('chatFabBadge'); if(!badge){ badge=document.createElement('span'); badge.id='chatFabBadge'; badge.style.cssText='position:absolute;top:-4px;right:-4px;background:#ff4757;color:#fff;min-width:20px;height:20px;padding:0 5px;border-radius:20px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #2a5298;'; btn.appendChild(badge); } badge.textContent = n>9?'9+':n; } else { const badge=document.getElementById('chatFabBadge'); if(badge) badge.remove(); } }catch(e){} }
-setInterval(refreshChatBadge,8000);
 
 function openNotifPanel(){ const list=getMyNotifications(); const seen=getSeenNotifs(); const html = list.length ? list.slice().reverse().map(n=>{ const isUnread=!seen.includes(n.id); return '<div class="notif-item '+(isUnread?'unread':'')+'" onclick="markSeen(\''+escapeAttr(n.id)+'\')"><div class="nt">'+new Date(n.at||Date.now()).toLocaleString()+'</div><div class="nb">'+escapeHtml(n.message)+'</div></div>'; }).join('') : '<div class="empty-msg">No notifications yet.</div>'; const panel=document.createElement('div'); panel.className='notif-panel open'; panel.id='notifPanel'; panel.innerHTML='<div class="notif-drawer"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;"><h2 style="margin:0;">Notifications</h2><button class="btn btn-ghost" style="padding:8px 14px;" onclick="closeNotifPanel()">Close</button></div>'+html+'</div>'; panel.addEventListener('click',e=>{ if(e.target===panel) closeNotifPanel(); }); document.body.appendChild(panel); setTimeout(()=>{ list.forEach(n=>markNotifSeen(n.id)); },1200); }
 function closeNotifPanel(){ const p=document.getElementById('notifPanel'); if(p) p.remove(); }
@@ -725,7 +680,6 @@ function submitSignUp(){
   saveProfileData({ name, phone, university:uni, stream });
   setUniversity(uni); setCheckedIn(); startSession(phone);
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
-  if(fbReady){ fbEnsureThread().then(()=>refreshChatBadge()).catch(()=>{}); }
   setTimeout(()=>{ showPostAuthWarning(()=>{ _navStack.length = 0; try{ history.replaceState({n:0},''); }catch(e){} switchTab('book'); }); }, 250);
 }
 
@@ -760,7 +714,6 @@ function submitSignIn(){
   saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
   setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
   msg.innerHTML='<div style="color:#2e7d32; font-weight:600;">Signed in!</div>';
-  if(fbReady){ fbEnsureThread().then(()=>{ checkRemoteActivation().then(()=>refreshChatBadge()); }).catch(()=>{}); }
   setTimeout(()=>{ showPostAuthWarning(()=>{ _navStack.length = 0; try{ history.replaceState({n:0},''); }catch(e){} switchTab('book'); }); }, 250);
 }
 function renderForgotPassword(){
@@ -771,6 +724,7 @@ function renderForgotPassword(){
 
 function switchTab(tab){
   saveScrollNow();
+  if(BASE_TABS[tab]) _lastBaseTab = tab;
   if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
   if(currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') _viewerState = null;
   _takeSnapshot();
@@ -796,7 +750,14 @@ function changeSemester(s){ setCurrentSemester(s); switchTab(currentTab); }
 
 function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
 function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
-function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); if(wrap){ const nz=getBookZoom(); wrap.style.zoom=nz; wrap.style.transform='scale('+nz+')'; wrap.style.transformOrigin='top left'; wrap.style.width=(100/nz)+'%'; } if(lbl) lbl.textContent=Math.round(getBookZoom()*100)+'%'; }
+function setBookZoom(z){
+  localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z))));
+  const wrap=document.getElementById('bookZoomWrap');
+  const lbl=document.getElementById('bookZoomPct');
+  const nz=getBookZoom();
+  if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } }
+  if(lbl) lbl.textContent=Math.round(nz*100)+'%';
+}
 function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
 
 function renderBooksHome(){
@@ -929,7 +890,9 @@ function jumpToSkipped(i){ quizState.index=i; renderQuizScreen(); }
 function finishExam(autoTimeout=false){
   clearInterval(quizState.timerId);
   setScreen('exam-home');
-  const total=quizState.questions.length; let score=0; quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.answer) score++; });
+  const total=quizState.questions.length;
+  for(let i=0;i<total;i++){ if(quizState.answers[i]===undefined || quizState.answers[i]===null) quizState.answers[i]=-1; }
+  let score=0; quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.answer) score++; });
   const pct=Math.round((score/total)*100); const g=gradeFor(pct); saveHistory({subject:quizState.subjectName,score,total,date:Date.now()});
   const reviewHTML=quizState.questions.map((q,i)=>{ const ua=quizState.answers[i]; const ok=ua===q.answer; const to=ua===-1; return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Timed out':(ua!==undefined&&q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>'; }).join('');
   window._retakeName=quizState.subjectName; window._retakeQuestions=quizState.rawQuestions; window._retakeTime=quizState.timeMinutes;
@@ -987,7 +950,7 @@ function renderMy(introMsg){
 function showActivationStatus(){ const a=checkAccess(); if(a.status==='licensed'){ alert('You already active'); } else { alert("You didn't finish payment. Please pay what required and get active"); } }
 function doLogout(){ if(!confirm('Logout now?')) return; if(isAdminMode()) setAdminMode(false); clearSession(); setCurrentUserPhone(''); _navStack.length=0; _viewerState=null; try{ history.replaceState({n:0},''); }catch(e){} alert('Logged out.'); setScreen('my'); renderMy(); }
 function renderProgress(){ _takeSnapshot(); setScreen('my'); const h=getHistory(); const hh=h.length?h.map(x=>{ const pct=Math.round((x.score/x.total)*100); return '<div class="history-item"><span>'+escapeHtml(x.subject)+'</span><span class="score-badge '+(pct<60?'low':'')+'">'+x.score+'/'+x.total+' — '+pct+'%</span></div>'; }).join(''):'<div class="empty-msg">No attempts yet.</div>'; app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Progress</h2>'+hh+(h.length?'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="clearHistory()">Clear</button>':'')+'<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-function syncNow(){ syncRemoteContent().then(()=>{ const v=localStorage.getItem(LS_SYNCED_VERSION),u=localStorage.getItem(LS_SYNCED_UPDATED); alert('Synced!\nVersion: '+(v||'-')+'\nUpdated: '+(u||'-')); initFirebase(); checkRemoteActivation().then(()=>renderMy()); }); }
+function syncNow(){ syncRemoteContent().then(()=>{ const v=localStorage.getItem(LS_SYNCED_VERSION),u=localStorage.getItem(LS_SYNCED_UPDATED); alert('Synced!\nVersion: '+(v||'-')+'\nUpdated: '+(u||'-')); renderMy(); }); }
 
 function renderInfoLocked(accessNow){ const signedIn=isSignedIn()&&hasActiveSession(); let title,msg; if(!signedIn){ title='Info Locked — Register First'; msg='University Info is only available to registered users.'; } else if(accessNow.status==='trial'){ title='Info Locked — Trial'; msg='University Info is only available after payment.'; } else { title='Info Locked — Expired'; msg='Your access has ended.'; } const btn = signedIn ? '<button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\'university\')">Unlock — '+CONFIG.PRICE_BIRR+' ETB</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Book</button>' : '<button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Book</button>'; app.innerHTML=renderHeader('university')+'<div class="locked-box"><div class="icon">🔒</div><h2>'+title+'</h2><p>'+msg+'</p>'+btn+'</div>'+renderBottomNav('university')+renderChatFab(); }
 function renderUniversityInfo(){
@@ -1034,7 +997,6 @@ function adminAddUniInfo(uni){ const t=(document.getElementById('uniInfoTitle').
 function adminSaveUniInfo(uni,i){ const t=(document.getElementById('uniInfoTitle').value||'').trim(); const b=(document.getElementById('uniInfoBody').value||'').trim(); const sEl=document.getElementById('uniInfoStream'); const stream=sEl?(sEl.value==='Social'?'Social':sEl.value==='Both'?'Both':'Natural'):'Natural'; if(!t||!b) return alert('Fill both'); const items=getUniInfoFor(uni); if(!items[i]) return; items[i]={title:t,body:b,stream:stream}; saveUniInfoFor(uni,items); adminUniInfoState.editing=null; alert('Saved for '+stream+' stream!'); renderAdminUniversityInfo(); }
 function adminDeleteUniInfo(uni,i){ if(!confirm('Delete?')) return; const items=getUniInfoFor(uni); items.splice(i,1); saveUniInfoFor(uni,items); renderAdminUniversityInfo(); }
 
-/* ===== ADMIN — ACTIVATE USER ===== */
 function renderAdminActivateUser(){
   _takeSnapshot();
   if(!isAdminMode()){ renderMy(); return; }
@@ -1050,13 +1012,14 @@ function renderAdminActivateUser(){
     '<div class="panel">'+
     '<div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Activate a User</div>'+
     '<h2>🔑 Activate User</h2>'+
-    '<p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:14px;">Pick a user from the list, or type their device hash manually. The app generates a license key you can send them.</p>'+
+    '<p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:14px;">Choose one of the 3 activation methods below.</p>'+
     (phones.length?'<label class="field-label">Pick registered user (optional)</label><select id="actPickUser" class="field-select" onchange="adminPickUserForActivation(this)" style="margin-bottom:12px;"><option value="">— Manual entry —</option>'+userOptions+'</select>':'')+
     '<label class="field-label">Device Hash (4 characters)</label>'+
     '<input type="text" id="actDeviceHash" maxlength="4" placeholder="ABCD" class="field-input" style="font-family:monospace;text-transform:uppercase;letter-spacing:3px;font-size:18px;text-align:center;">'+
-    '<label class="field-label">Your Secret (leave as-is unless you changed it)</label>'+
+    '<label class="field-label">Your Secret</label>'+
     '<input type="text" id="actSecret" class="field-input" value="'+escapeAttr(CONFIG.SECRET)+'" style="font-family:monospace;font-size:12px;">'+
-    '<button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="adminGenerateActivationKey()">🔑 Generate Key</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="adminGenerateActivationKey()">🔑 Option 1 — Generate Key</button>'+
+    '<button class="btn btn-full" style="margin-top:8px;background:#ff9800;color:#fff;" onclick="adminShowMasterKey()">🔓 Option 2 — Master Key</button>'+
     '<div id="actResult" style="margin-top:16px;"></div>'+
     (recent.length?'<h3 style="margin-top:24px;">Recent Keys ('+recent.length+')</h3>'+recent.slice(0,10).map(r=>'<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;font-size:12px;"><div style="font-family:monospace;font-weight:800;color:#6a3093;font-size:14px;margin-bottom:4px;">'+escapeHtml(r.key)+'</div><div style="color:#888;">Hash: '+escapeHtml(r.hash)+' · '+new Date(r.at).toLocaleString()+(r.name?' · '+escapeHtml(r.name):'')+'</div></div>').join(''):'')+
     '<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button>'+
@@ -1099,6 +1062,23 @@ function adminGenerateActivationKey(){
     '</div>';
 }
 
+function adminShowMasterKey(){
+  if(!isAdminMode()) return;
+  const out = document.getElementById('actResult');
+  const key = 'MASTER-UNBLOCK-ALL';
+  const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your Freshman Study Hub master unlock code:');
+  if(out){
+    out.innerHTML =
+      '<div style="background:#fff3cd;border:2px solid #ff9800;border-radius:14px;padding:18px;text-align:center;">'+
+      '<div style="font-size:11px;color:#856404;font-weight:800;letter-spacing:1px;margin-bottom:8px;">MASTER KEY — USE ONLY IN EMERGENCIES</div>'+
+      '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#856404;letter-spacing:2px;word-break:break-all;margin-bottom:12px;">'+key+'</div>'+
+      '<div style="font-size:12px;color:#856404;line-height:1.7;margin-bottom:12px;">Works on <strong>any device</strong>. User enters it in <em>My → Enter License Key</em> and gets unlimited access forever.<br><br>⚠️ Give only to trusted users — it can\'t be revoked.</div>'+
+      '<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Master Key</button>'+
+      '<a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a>'+
+      '</div>';
+  }
+}
+
 function adminCopyKey(key){
   try { navigator.clipboard.writeText(key); alert('✅ Key copied:\n'+key); }
   catch(e){
@@ -1115,7 +1095,7 @@ function renderAdminSettings(){
   const uniOpts = (s.UNIVERSITIES||[]).map(u=>'<option value="'+escapeHtml(u)+'" '+(u===(s.TRIAL_UNIVERSITY||'')?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings (everything is controlled here)</div><h2>⚙️ App Settings</h2>'+
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2>'+
     '<h3>General</h3>'+
     '<label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'">'+
     '<label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'">'+
@@ -1143,20 +1123,12 @@ function renderAdminSettings(){
     chk('info','🏛️ University Info')+
     '<label class="field-label" style="margin-top:16px;">Trial Subject</label>'+
     '<input type="text" id="stTrialSubject" class="field-input" value="'+escapeAttr(s.TRIAL_SUBJECT||'english')+'" placeholder="english">'+
-    '<div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Accepts <code>english</code>, <code>math</code>, <code>physics</code>, <code>logic</code>, <code>psychology</code>, <code>geography</code>, or a partial name.</div>'+
     '<h3>Universities</h3>'+
     '<label class="field-label">University Names (one per line)</label>'+
     '<textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea>'+
     '<h3>Security</h3>'+
     '<label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'">'+
     '<label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/Freshman-hub">'+
-    '<h3 style="margin-top:20px;">Firebase Chat</h3>'+
-    '<label class="field-label">API Key</label><input type="text" id="fbApiKey" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.apiKey)||'')+'">'+
-    '<label class="field-label">Auth Domain</label><input type="text" id="fbAuthDomain" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.authDomain)||'')+'">'+
-    '<label class="field-label">Project ID</label><input type="text" id="fbProjectId" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.projectId)||'')+'">'+
-    '<label class="field-label">Storage Bucket</label><input type="text" id="fbStorageBucket" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.storageBucket)||'')+'">'+
-    '<label class="field-label">Messaging Sender ID</label><input type="text" id="fbMsgSender" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.messagingSenderId)||'')+'">'+
-    '<label class="field-label">App ID</label><input type="text" id="fbAppId" class="field-input" value="'+escapeAttr((s.FIREBASE&&s.FIREBASE.appId)||'')+'">'+
     '<button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
@@ -1190,15 +1162,25 @@ function saveAdminSettings(){
   if(uniList.length) s.UNIVERSITIES = uniList;
   s.ADMIN_PASSWORD=document.getElementById('stAdminPw').value.trim()||DEFAULT_CONFIG.ADMIN_PASSWORD;
   s.CONTENT_URL=document.getElementById('stContentUrl').value.trim();
-  s.FIREBASE={ apiKey:document.getElementById('fbApiKey').value.trim(), authDomain:document.getElementById('fbAuthDomain').value.trim(), projectId:document.getElementById('fbProjectId').value.trim(), storageBucket:document.getElementById('fbStorageBucket').value.trim(), messagingSenderId:document.getElementById('fbMsgSender').value.trim(), appId:document.getElementById('fbAppId').value.trim() };
   s._adminEdited=Date.now();
-  saveSettings(s); reloadConfig(); initFirebase();
-  alert('✅ Settings saved.\nTrial: '+s.TRIAL_UNIVERSITY+'\nContent: '+(s.TRIAL_CONTENT.join(', ')||'none')+'\nSubject: '+s.TRIAL_SUBJECT);
+  saveSettings(s); reloadConfig();
+  alert('✅ Settings saved.');
   renderAdminSettings();
 }
-function resetAdminSettings(){ if(!confirm('Reset ALL settings to factory defaults?')) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); initFirebase(); alert('Settings reset.'); renderAdminSettings(); }
+function resetAdminSettings(){ if(!confirm('Reset ALL settings to factory defaults?')) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); alert('Settings reset.'); renderAdminSettings(); }
 
-function renderAdminUsers(){ _takeSnapshot(); if(!isAdminMode()){ renderMy(); return; } setScreen('my'); const u=getUsers(); const phones=Object.keys(u); app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — User Accounts</div><h2>User Accounts</h2><button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>'+(phones.length?phones.map(p=>{ const user=u[p]; const uSessLeft = user.sessionExpiresAt ? Math.max(0, Math.ceil((user.sessionExpiresAt-Date.now())/86400000)) : '—'; return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; font-size:12.5px;"><div style="font-weight:800; color:#333; margin-bottom:4px;">'+escapeHtml(user.name)+'</div><div><strong>Phone:</strong> '+escapeHtml(user.phone)+'</div><div><strong>University:</strong> '+escapeHtml(user.university)+'</div><div><strong>Stream:</strong> '+escapeHtml(user.stream)+'</div><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div><strong>Session left:</strong> <span class="session-badge">'+uSessLeft+(typeof uSessLeft==='number'?' days':'')+'</span></div><div style="margin-top:8px; display:flex; gap:6px;"><button class="btn btn-ghost" style="flex:1; padding:8px; font-size:12px;" onclick="openUserEditor(\''+escapeAttr(user.phone)+'\')">✎ Edit</button><button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px; background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate</button><button class="btn btn-danger" onclick="adminDeleteUser(\''+escapeAttr(user.phone)+'\')">Delete</button></div></div>'; }).join(''):'<div class="empty-msg">No users registered on this device yet.</div>')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
+function renderAdminUsers(){
+  _takeSnapshot();
+  if(!isAdminMode()){ renderMy(); return; }
+  setScreen('my');
+  const u=getUsers();
+  const phones=Object.keys(u);
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — User Accounts</div><h2>User Accounts</h2><button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>'+(phones.length?phones.map(p=>{
+    const user=u[p];
+    const uSessLeft = user.sessionExpiresAt ? Math.max(0, Math.ceil((user.sessionExpiresAt-Date.now())/86400000)) : '—';
+    return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; font-size:12.5px;"><div style="font-weight:800; color:#333; margin-bottom:4px;">'+escapeHtml(user.name)+'</div><div><strong>Phone:</strong> '+escapeHtml(user.phone)+'</div><div><strong>University:</strong> '+escapeHtml(user.university)+'</div><div><strong>Stream:</strong> '+escapeHtml(user.stream)+'</div><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div style="margin-top:8px; display:flex; gap:6px;"><button class="btn btn-ghost" style="flex:1; padding:8px; font-size:12px;" onclick="openUserEditor(\''+escapeAttr(user.phone)+'\')">✎ Edit</button><button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px; background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate</button><button class="btn btn-danger" onclick="adminDeleteUser(\''+escapeAttr(user.phone)+'\')">Delete</button></div></div>';
+  }).join(''):'<div class="empty-msg">No users registered on this device yet.</div>')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+}
 
 function adminActivateThisUser(hash){
   renderAdminActivateUser();
@@ -1215,7 +1197,7 @@ function openUserEditor(phone){
   const u = getUsers(); const user = u[phone]; const result = document.getElementById('userEditorResult'); if(!result) return;
   if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+' on this device.</div>'; return; }
   const uSessLeft = user.sessionExpiresAt ? Math.max(0, Math.ceil((user.sessionExpiresAt-Date.now())/86400000)) : '—';
-  result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found — edit anything below</div><div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;"><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div><div><strong>Session left:</strong> <span class="session-badge">'+uSessLeft+(typeof uSessLeft==='number'?' days':'')+'</span></div></div><button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button><label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'"><label class="field-label">Phone</label><input type="tel" id="editUserPhone" class="field-input" value="'+escapeAttr(user.phone||'')+'"><label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select><label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select><label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters"><label class="field-label">Reset Session Days (leave blank to keep)</label><input type="number" id="editUserSessionDays" class="field-input" placeholder="e.g. 365" min="1" max="3650"><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
+  result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div><div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;"><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div><div><strong>Session left:</strong> <span class="session-badge">'+uSessLeft+(typeof uSessLeft==='number'?' days':'')+'</span></div></div><button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button><label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'"><label class="field-label">Phone</label><input type="tel" id="editUserPhone" class="field-input" value="'+escapeAttr(user.phone||'')+'"><label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select><label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select><label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters"><label class="field-label">Reset Session Days (leave blank to keep)</label><input type="number" id="editUserSessionDays" class="field-input" placeholder="e.g. 365" min="1" max="3650"><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
 }
 function saveUserEdit(oldPhone){
   if(!isAdminMode()) return;
@@ -1240,8 +1222,7 @@ function saveUserEdit(oldPhone){
   alert('✅ User updated!');
   openUserEditor(newPhone);
 }
-function adminResetUserPw(phone){ const npw=prompt('New password/PIN (min 4 chars):'); if(!npw) return; if(npw.length<4) return alert('Too short.'); const u=getUsers(); if(!u[phone]) return; u[phone].passwordHash=hashPassword(phone,npw); saveUsers(u); alert('Password reset.'); renderAdminUsers(); }
-function adminDeleteUser(phone){ if(!confirm('Delete user '+phone+'?\n\nThey will need to Sign Up fresh to use the app again.')) return; const u=getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone); const result=document.getElementById('userEditorResult'); if(result) result.innerHTML=''; alert('User deleted.'); renderAdminUsers(); }
+function adminDeleteUser(phone){ if(!confirm('Delete user '+phone+'?')) return; const u=getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone); const result=document.getElementById('userEditorResult'); if(result) result.innerHTML=''; alert('User deleted.'); renderAdminUsers(); }
 
 function renderAdminStats(){ _takeSnapshot(); if(!isAdminMode()){ renderMy(); return; } setScreen('my'); const h=getHistory(), access=checkAccess(); const ta=h.length, avg=ta?Math.round(h.reduce((a,x)=>a+(x.score/x.total)*100,0)/ta):0; app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin Analytics</div><h2>This Device</h2><div class="stat-grid"><div class="stat-box"><div class="num">'+Object.keys(getUsers()).length+'</div><div class="label">Users</div></div><div class="stat-box"><div class="num">'+ta+'</div><div class="label">Attempts</div></div><div class="stat-box"><div class="num">'+avg+'%</div><div class="label">Avg</div></div><div class="stat-box"><div class="num">'+(access.status==='licensed'?'OK':access.status==='trial'?'T':'X')+'</div><div class="label">'+access.status+'</div></div></div><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
 
@@ -1261,22 +1242,22 @@ function renderAdminContentManager(tab){
   const uniOpts=CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">University</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:8px; margin-bottom:16px;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; padding:12px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Books ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; padding:12px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:12px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Exams ('+(c.exams||[]).length+')</button></div><button class="btn btn-primary btn-full" style="margin-bottom:16px; background:#4caf50;" onclick="adminBulkState.uni=adminEditState.uni;adminBulkState.stream=adminEditState.stream;adminBulkState.semester=adminEditState.semester;renderAdminBulkAdd()">📦 Bulk Add (Book + Note + Exam at once)</button>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
-function renderAdminBookList(uni,stream,sem,pdfs){ const editing=adminEditState.editing; return '<h3>Add Book</h3><input type="text" id="pdfName" placeholder="Book name" class="field-input" style="margin-bottom:8px;"><label class="field-label">Option A — Paste URL</label><input type="url" id="pdfUrl" placeholder="https://link.pdf" class="field-input" style="margin-bottom:8px;"><label class="field-label">Option B — Upload from phone</label><input type="file" id="pdfFile" accept="application/pdf,image/*" class="upload-box"><div id="pdfUploadStatus" style="font-size:12px; color:#6a3093; min-height:16px; margin-bottom:8px;"></div><button class="btn btn-primary btn-full" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Book</button>'+(pdfs.length?'<h3 style="margin-top:20px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Book Name</label><input type="text" id="editBookName" class="field-input" value="'+escapeAttr(p.name)+'" style="margin-bottom:8px;"><label class="field-label">URL</label><input type="url" id="editBookUrl" class="field-input" value="'+escapeAttr(p.url||'')+'" style="margin-bottom:8px;"><label class="field-label">Or replace with upload</label><input type="file" id="editBookFile" accept="application/pdf,image/*" class="upload-box"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'book\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(p.name)+(p.url?' 🔗':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'book\',index:'+i+'};renderAdminContentManager(\'book\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
-async function adminAddBook(uni,stream,sem){ const n=(document.getElementById('pdfName').value||'').trim(); const u=(document.getElementById('pdfUrl').value||'').trim(); const fEl=document.getElementById('pdfFile'); const status=document.getElementById('pdfUploadStatus'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!n) return alert('Enter book name'); let finalUrl=u; if(f){ if(!fbReady) return alert('Firebase not configured.'); try{ status.textContent='Uploading…'; finalUrl=await adminUploadContentFile(f,uni,stream,sem,'books'); status.textContent='Uploaded ✓'; }catch(e){ status.textContent=''; return alert('Upload failed: '+e.message); } } if(!finalUrl) return alert('Paste URL or upload a file'); const c=getUniContent(uni,stream,sem); c.pdfs.push({name:n,url:finalUrl}); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }
-async function adminSaveBook(uni,stream,sem,i){ const n=(document.getElementById('editBookName').value||'').trim(); let u=(document.getElementById('editBookUrl').value||'').trim(); const fEl=document.getElementById('editBookFile'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!n) return alert('Enter name'); if(f){ if(!fbReady) return alert('Firebase not configured'); try{ u=await adminUploadContentFile(f,uni,stream,sem,'books'); }catch(e){ return alert('Upload failed: '+e.message); } } const c=getUniContent(uni,stream,sem); if(!c.pdfs[i]) return; c.pdfs[i]={name:n,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Book updated!'); renderAdminContentManager('book'); }
+function renderAdminBookList(uni,stream,sem,pdfs){ const editing=adminEditState.editing; return '<h3>Add Book</h3><label class="field-label">Book Name</label><input type="text" id="pdfName" placeholder="Book name" class="field-input" style="margin-bottom:8px;"><label class="field-label">URL (GitHub Raw link)</label><input type="url" id="pdfUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.6;">Upload PDF to GitHub repo <code>pdfs/</code> folder → right-click → Copy raw URL → paste above</div><button class="btn btn-primary btn-full" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Book</button>'+(pdfs.length?'<h3 style="margin-top:20px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Book Name</label><input type="text" id="editBookName" class="field-input" value="'+escapeAttr(p.name)+'" style="margin-bottom:8px;"><label class="field-label">URL</label><input type="url" id="editBookUrl" class="field-input" value="'+escapeAttr(p.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'book\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(p.name)+(p.url?' 🔗':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'book\',index:'+i+'};renderAdminContentManager(\'book\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
+function adminAddBook(uni,stream,sem){ const n=(document.getElementById('pdfName').value||'').trim(); const u=(document.getElementById('pdfUrl').value||'').trim(); if(!n) return alert('Enter book name'); if(!u) return alert('Paste the GitHub raw URL'); const c=getUniContent(uni,stream,sem); c.pdfs.push({name:n,url:u}); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }
+function adminSaveBook(uni,stream,sem,i){ const n=(document.getElementById('editBookName').value||'').trim(); const u=(document.getElementById('editBookUrl').value||'').trim(); if(!n) return alert('Enter name'); if(!u) return alert('Paste URL'); const c=getUniContent(uni,stream,sem); if(!c.pdfs[i]) return; c.pdfs[i]={name:n,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Book updated!'); renderAdminContentManager('book'); }
 function adminDeleteBook(uni,stream,sem,i){ if(!confirm('Delete?')) return; const c=getUniContent(uni,stream,sem); c.pdfs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }
-function renderAdminNoteList(uni,stream,sem,notes){ const editing=adminEditState.editing; return '<h3>Add Note</h3><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="noteUrl" placeholder="https://link.pdf" class="field-input" style="margin-bottom:8px;"><label class="field-label">Or upload file (optional)</label><input type="file" id="noteFile" accept="application/pdf,image/*" class="upload-box"><div id="noteUploadStatus" style="font-size:12px; color:#6a3093; min-height:16px; margin-bottom:8px;"></div><button class="btn btn-primary btn-full" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+(notes.length?'<h3 style="margin-top:20px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><label class="field-label">Or replace with upload</label><input type="file" id="editNoteFile" accept="application/pdf,image/*" class="upload-box"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'note\',index:'+i+'};renderAdminContentManager(\'note\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
-async function adminAddNote(uni,stream,sem){ const t=(document.getElementById('noteTitle').value||'').trim(); const b=(document.getElementById('noteBody').value||'').trim(); let u=(document.getElementById('noteUrl').value||'').trim(); const fEl=document.getElementById('noteFile'); const status=document.getElementById('noteUploadStatus'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!t) return alert('Enter title'); if(f){ if(!fbReady) return alert('Firebase not configured'); try{ status.textContent='Uploading…'; u=await adminUploadContentFile(f,uni,stream,sem,'notes'); status.textContent='Uploaded ✓'; }catch(e){ status.textContent=''; return alert('Upload failed: '+e.message); } } if(!b&&!u) return alert('Write body or attach file'); const c=getUniContent(uni,stream,sem); c.notes.push({title:t,body:b,url:u}); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }
-async function adminSaveNote(uni,stream,sem,i){ const t=(document.getElementById('editNoteTitle').value||'').trim(); const b=(document.getElementById('editNoteBody').value||'').trim(); let u=(document.getElementById('editNoteUrl').value||'').trim(); const fEl=document.getElementById('editNoteFile'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!t) return alert('Enter title'); if(f){ if(!fbReady) return alert('Firebase not configured'); try{ u=await adminUploadContentFile(f,uni,stream,sem,'notes'); }catch(e){ return alert('Upload failed: '+e.message); } } const c=getUniContent(uni,stream,sem); if(!c.notes[i]) return; c.notes[i]={title:t,body:b,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Note updated!'); renderAdminContentManager('note'); }
+function renderAdminNoteList(uni,stream,sem,notes){ const editing=adminEditState.editing; return '<h3>Add Note</h3><label class="field-label">Title</label><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><label class="field-label">Body (HTML allowed)</label><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="noteUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+(notes.length?'<h3 style="margin-top:20px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'note\',index:'+i+'};renderAdminContentManager(\'note\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
+function adminAddNote(uni,stream,sem){ const t=(document.getElementById('noteTitle').value||'').trim(); const b=(document.getElementById('noteBody').value||'').trim(); const u=(document.getElementById('noteUrl').value||'').trim(); if(!t) return alert('Enter title'); if(!b&&!u) return alert('Write body or attach URL'); const c=getUniContent(uni,stream,sem); c.notes.push({title:t,body:b,url:u}); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }
+function adminSaveNote(uni,stream,sem,i){ const t=(document.getElementById('editNoteTitle').value||'').trim(); const b=(document.getElementById('editNoteBody').value||'').trim(); const u=(document.getElementById('editNoteUrl').value||'').trim(); if(!t) return alert('Enter title'); const c=getUniContent(uni,stream,sem); if(!c.notes[i]) return; c.notes[i]={title:t,body:b,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Note updated!'); renderAdminContentManager('note'); }
 function adminDeleteNote(uni,stream,sem,i){ if(!confirm('Delete?')) return; const c=getUniContent(uni,stream,sem); c.notes.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }
 function formatQuestionsForEdit(qs){ return qs.map((q,i)=>{ const lines=[(i+1)+'. '+q.q]; q.options.forEach((opt,j)=>lines.push(String.fromCharCode(65+j)+') '+opt)); lines.push('Answer: '+String.fromCharCode(65+q.answer)); if(q.explanation) lines.push('Explanation: '+q.explanation); lines.push(''); return lines.join('\n'); }).join('\n'); }
 function renderAdminExamList(uni,stream,sem,exams){
   const editing=adminEditState.editing;
-  const editorForm=(ex,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Exam Name</label><input type="text" id="editExamName" class="field-input" value="'+escapeAttr(ex.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editExamChapter" class="field-input" value="'+escapeAttr(ex.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editExamYear" class="field-input" value="'+escapeAttr(ex.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editExamTime" class="field-input" value="'+(ex.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editExamText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(ex.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editExamUrl" class="field-input" value="'+escapeAttr(ex.url||'')+'" style="margin-bottom:8px;"><label class="field-label">Or replace with upload</label><input type="file" id="editExamFile" accept="application/pdf,image/*" class="upload-box"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'exam\')">Cancel</button></div></div>';
-  return '<h3>Add Exam</h3><label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="examUrl" placeholder="https://link.pdf" class="field-input" style="margin-bottom:8px;"><label class="field-label">Or upload file (optional)</label><input type="file" id="examFile" accept="application/pdf,image/*" class="upload-box"><div id="examUploadStatus" style="font-size:12px; color:#6a3093; min-height:16px; margin-bottom:8px;"></div><button class="btn btn-primary btn-full" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+(exams.length?'<h3 style="margin-top:20px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'exam\',index:'+oi+'};renderAdminContentManager(\'exam\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
+  const editorForm=(ex,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Exam Name</label><input type="text" id="editExamName" class="field-input" value="'+escapeAttr(ex.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editExamChapter" class="field-input" value="'+escapeAttr(ex.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editExamYear" class="field-input" value="'+escapeAttr(ex.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editExamTime" class="field-input" value="'+(ex.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editExamText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(ex.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editExamUrl" class="field-input" value="'+escapeAttr(ex.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'exam\')">Cancel</button></div></div>';
+  return '<h3>Add Exam</h3><label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="examUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+(exams.length?'<h3 style="margin-top:20px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'exam\',index:'+oi+'};renderAdminContentManager(\'exam\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
 }
-async function adminAddExam(uni,stream,sem){ const n=document.getElementById('examName').value.trim(); const ch=(document.getElementById('examChapter').value||'').trim(); const y=(document.getElementById('examYear').value||'').trim(); const tm=parseInt(document.getElementById('examTime').value)||0; const tx=document.getElementById('examText').value.trim(); let u=(document.getElementById('examUrl').value||'').trim(); const fEl=document.getElementById('examFile'); const status=document.getElementById('examUploadStatus'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!n) return alert('Enter exam name'); if(!tx&&!f&&!u) return alert('Paste questions, paste URL, or upload file'); let qs=tx?parseQuestions(tx):[]; if(f){ if(!fbReady) return alert('Firebase not configured'); try{ status.textContent='Uploading…'; u=await adminUploadContentFile(f,uni,stream,sem,'exams'); status.textContent='Uploaded ✓'; }catch(e){ status.textContent=''; return alert('Upload failed: '+e.message); } } if(!qs.length&&!u) return alert('No valid questions and no file'); const c=getUniContent(uni,stream,sem); c.exams.push({name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}); setUniContent(uni,stream,sem,c); alert('Added'+(qs.length?' '+qs.length+' questions':'')); renderAdminContentManager('exam'); }
-async function adminSaveExam(uni,stream,sem,i){ const n=(document.getElementById('editExamName').value||'').trim(); const ch=(document.getElementById('editExamChapter').value||'').trim(); const y=(document.getElementById('editExamYear').value||'').trim(); const tm=parseInt(document.getElementById('editExamTime').value)||0; const tx=document.getElementById('editExamText').value.trim(); let u=(document.getElementById('editExamUrl').value||'').trim(); const fEl=document.getElementById('editExamFile'); const f=fEl&&fEl.files?fEl.files[0]:null; if(!n) return alert('Enter name'); if(f){ if(!fbReady) return alert('Firebase not configured'); try{ u=await adminUploadContentFile(f,uni,stream,sem,'exams'); }catch(e){ return alert('Upload failed: '+e.message); } } let qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return alert('Need questions or file'); const c=getUniContent(uni,stream,sem); if(!c.exams[i]) return; c.exams[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Exam updated!'); renderAdminContentManager('exam'); }
+function adminAddExam(uni,stream,sem){ const n=document.getElementById('examName').value.trim(); const ch=(document.getElementById('examChapter').value||'').trim(); const y=(document.getElementById('examYear').value||'').trim(); const tm=parseInt(document.getElementById('examTime').value)||0; const tx=document.getElementById('examText').value.trim(); const u=(document.getElementById('examUrl').value||'').trim(); if(!n) return alert('Enter exam name'); if(!tx&&!u) return alert('Paste questions or paste URL'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return alert('No valid questions and no URL'); const c=getUniContent(uni,stream,sem); c.exams.push({name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}); setUniContent(uni,stream,sem,c); alert('Added'+(qs.length?' '+qs.length+' questions':'')); renderAdminContentManager('exam'); }
+function adminSaveExam(uni,stream,sem,i){ const n=(document.getElementById('editExamName').value||'').trim(); const ch=(document.getElementById('editExamChapter').value||'').trim(); const y=(document.getElementById('editExamYear').value||'').trim(); const tm=parseInt(document.getElementById('editExamTime').value)||0; const tx=document.getElementById('editExamText').value.trim(); const u=(document.getElementById('editExamUrl').value||'').trim(); if(!n) return alert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return alert('Need questions or URL'); const c=getUniContent(uni,stream,sem); if(!c.exams[i]) return; c.exams[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; alert('Exam updated!'); renderAdminContentManager('exam'); }
 function adminDeleteExam(uni,stream,sem,i){ if(!confirm('Delete?')) return; const c=getUniContent(uni,stream,sem); c.exams.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('exam'); }
 
 function renderAdminBulkAdd(){
@@ -1288,10 +1269,10 @@ function renderAdminBulkAdd(){
   const stream = adminBulkState.stream || 'Natural';
   const semester = adminBulkState.semester || 1;
   const uniOpts = CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add — Book + Note + Exam</h2><p style="font-size:12.5px;color:#666;line-height:1.7;margin-bottom:14px;">Fill any of the three sections. Empty sections are skipped.</p><label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex;gap:8px;margin-bottom:12px;"><button type="button" onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Natural'?'#6a3093':'#fff')+';color:'+(stream==='Natural'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Natural</button><button type="button" onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Social'?'#6a3093':'#fff')+';color:'+(stream==='Social'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex;gap:8px;margin-bottom:20px;"><button type="button" onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+';background:'+(semester===1?'#6a3093':'#fff')+';color:'+(semester===1?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">1st Sem</button><button type="button" onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+';background:'+(semester===2?'#6a3093':'#fff')+';color:'+(semester===2?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">2nd Sem</button></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Book <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkBookName" placeholder="Book name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="URL (optional)" class="field-input" style="margin-bottom:8px;"><input type="file" id="bulkBookFile" accept="application/pdf,image/*" class="upload-box"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body (HTML allowed)" class="field-textarea" style="margin-bottom:8px;"></textarea><input type="url" id="bulkNoteUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"><input type="file" id="bulkNoteFile" accept="application/pdf,image/*" class="upload-box"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkExamTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkExamText" placeholder="Paste questions (optional if you upload a file)" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkExamUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"><input type="file" id="bulkExamFile" accept="application/pdf,image/*" class="upload-box"></div><div id="bulkStatus" style="font-size:12.5px;color:#6a3093;min-height:18px;margin-bottom:10px;font-weight:700;"></div><button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit All Filled Sections</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add — Book + Note + Exam</h2><p style="font-size:12.5px;color:#666;line-height:1.7;margin-bottom:14px;">Fill any of the three sections with GitHub raw URLs. Empty sections are skipped.</p><label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex;gap:8px;margin-bottom:12px;"><button type="button" onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Natural'?'#6a3093':'#fff')+';color:'+(stream==='Natural'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Natural</button><button type="button" onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Social'?'#6a3093':'#fff')+';color:'+(stream==='Social'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex;gap:8px;margin-bottom:20px;"><button type="button" onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+';background:'+(semester===1?'#6a3093':'#fff')+';color:'+(semester===1?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">1st Sem</button><button type="button" onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+';background:'+(semester===2?'#6a3093':'#fff')+';color:'+(semester===2?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">2nd Sem</button></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Book <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkBookName" placeholder="Book name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="GitHub raw URL" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body (HTML allowed)" class="field-textarea" style="margin-bottom:8px;"></textarea><input type="url" id="bulkNoteUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkExamTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkExamText" placeholder="Paste questions (optional if URL provided)" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkExamUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div><div id="bulkStatus" style="font-size:12.5px;color:#6a3093;min-height:18px;margin-bottom:10px;font-weight:700;"></div><button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit All Filled Sections</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 
-async function adminSubmitBulk(){
+function adminSubmitBulk(){
   if(!isAdminMode()) return;
   const uni = (document.getElementById('bulkUni')||{}).value || adminBulkState.uni;
   const stream = adminBulkState.stream || 'Natural';
@@ -1301,46 +1282,37 @@ async function adminSubmitBulk(){
   status.textContent = 'Processing…';
   const bookName = (document.getElementById('bulkBookName').value||'').trim();
   const bookUrl = (document.getElementById('bulkBookUrl').value||'').trim();
-  const bookFileEl = document.getElementById('bulkBookFile'); const bookFile = bookFileEl && bookFileEl.files ? bookFileEl.files[0] : null;
   const noteTitle = (document.getElementById('bulkNoteTitle').value||'').trim();
   const noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
   const noteUrl = (document.getElementById('bulkNoteUrl').value||'').trim();
-  const noteFileEl = document.getElementById('bulkNoteFile'); const noteFile = noteFileEl && noteFileEl.files ? noteFileEl.files[0] : null;
   const examName = (document.getElementById('bulkExamName').value||'').trim();
   const examChapter = (document.getElementById('bulkExamChapter').value||'').trim();
   const examYear = (document.getElementById('bulkExamYear').value||'').trim();
   const examTime = parseInt((document.getElementById('bulkExamTime')||{}).value) || 0;
   const examText = (document.getElementById('bulkExamText').value||'').trim();
   const examUrl = (document.getElementById('bulkExamUrl').value||'').trim();
-  const examFileEl = document.getElementById('bulkExamFile'); const examFile = examFileEl && examFileEl.files ? examFileEl.files[0] : null;
-  const hasBook = !!(bookName || bookUrl || bookFile);
-  const hasNote = !!(noteTitle || noteBody || noteUrl || noteFile);
-  const hasExam = !!(examName || examText || examUrl || examFile);
+  const hasBook = !!(bookName || bookUrl);
+  const hasNote = !!(noteTitle || noteBody || noteUrl);
+  const hasExam = !!(examName || examText || examUrl);
   if(!hasBook && !hasNote && !hasExam){ status.textContent=''; return alert('Fill at least one section'); }
   try {
     const c = getUniContent(uni, stream, semester);
     const added = { books:0, notes:0, exams:0 };
     if(hasBook){
       if(!bookName){ status.textContent=''; return alert('Book needs a name'); }
-      let finalUrl = bookUrl;
-      if(bookFile){ if(!fbReady){ status.textContent=''; return alert('Firebase not configured'); } status.textContent = 'Uploading book…'; finalUrl = await adminUploadContentFile(bookFile, uni, stream, semester, 'books'); }
-      if(!finalUrl){ status.textContent=''; return alert('Book needs a URL or file'); }
-      c.pdfs.push({name: bookName, url: finalUrl}); added.books++;
+      if(!bookUrl){ status.textContent=''; return alert('Book needs a URL'); }
+      c.pdfs.push({name: bookName, url: bookUrl}); added.books++;
     }
     if(hasNote){
       if(!noteTitle){ status.textContent=''; return alert('Note needs a title'); }
-      let finalUrl = noteUrl;
-      if(noteFile){ if(!fbReady){ status.textContent=''; return alert('Firebase not configured'); } status.textContent = 'Uploading note…'; finalUrl = await adminUploadContentFile(noteFile, uni, stream, semester, 'notes'); }
-      if(!noteBody && !finalUrl){ status.textContent=''; return alert('Note needs a body or file'); }
-      c.notes.push({title: noteTitle, body: noteBody, url: finalUrl}); added.notes++;
+      if(!noteBody && !noteUrl){ status.textContent=''; return alert('Note needs a body or URL'); }
+      c.notes.push({title: noteTitle, body: noteBody, url: noteUrl}); added.notes++;
     }
     if(hasExam){
       if(!examName){ status.textContent=''; return alert('Exam needs a name'); }
-      let finalUrl = examUrl;
-      if(examFile){ if(!fbReady){ status.textContent=''; return alert('Firebase not configured'); } status.textContent = 'Uploading exam…'; finalUrl = await adminUploadContentFile(examFile, uni, stream, semester, 'exams'); }
       const qs = examText ? parseQuestions(examText) : [];
-      if(!qs.length && !finalUrl){ status.textContent=''; return alert('Exam needs questions or a file'); }
-      c.exams.push({name: examName, chapter: examChapter, year: examYear, timeMinutes: examTime, questions: qs, url: finalUrl}); added.exams++;
+      if(!qs.length && !examUrl){ status.textContent=''; return alert('Exam needs questions or URL'); }
+      c.exams.push({name: examName, chapter: examChapter, year: examYear, timeMinutes: examTime, questions: qs, url: examUrl}); added.exams++;
     }
     setUniContent(uni, stream, semester, c);
     status.textContent = '';
@@ -1397,7 +1369,7 @@ function exportContentForShipping(){
   const lib=getContentLibrary();
   const wrap={ version:parseInt(localStorage.getItem(LS_SYNCED_VERSION)||'0')+1, updated:new Date().toISOString().slice(0,10), blacklist:getBlacklist(), notifications:getNotifications(), tutorials:getTutorials(), settings:getSettings(), registeredPhones:getRegisteredPhones(), universityInfo:getUniInfo(), generalSubjects:getGeneralSubjects(), universities:lib };
   const json=JSON.stringify(wrap,null,2);
-  app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Export Content</h2><div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; font-size:13px; color:#1565c0; margin-bottom:14px; line-height:1.7;"><strong>Next steps:</strong><br>1. Copy JSON<br>2. GitHub → content.json → edit → paste<br>3. Commit</div><textarea readonly onclick="this.select()" style="width:100%; padding:12px; border:2px solid #e0e0e6; border-radius:10px; font-size:11px; font-family:monospace; min-height:400px; outline:none;">'+escapeHtml(json)+'</textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="copyExport()">Copy JSON</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Export Content</h2><div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; font-size:13px; color:#1565c0; margin-bottom:14px; line-height:1.7;"><strong>Next steps:</strong><br>1. Copy JSON<br>2. GitHub → content.json → edit → paste<br>3. Bump version.json<br>4. Commit</div><textarea readonly onclick="this.select()" style="width:100%; padding:12px; border:2px solid #e0e0e6; border-radius:10px; font-size:11px; font-family:monospace; min-height:400px; outline:none;">'+escapeHtml(json)+'</textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="copyExport()">Copy JSON</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 function copyExport(){ const ta=document.querySelector('textarea[readonly]'); ta.select(); document.execCommand('copy'); alert('Copied!'); }
 function clearDraftContent(){ if(!confirm('Clear ALL draft content?')) return; localStorage.removeItem(LS_CONTENT_DRAFT); alert('Cleared'); renderAdminContentManager('exam'); }
@@ -1481,14 +1453,13 @@ function parseQuestions(text){
 }
 
 (function init(){
-  applyTheme(); applyAdminModeClass(); reloadConfig(); initFirebase();
+  applyTheme(); applyAdminModeClass(); reloadConfig();
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
   syncRemoteContent().catch(()=>{});
   if(isBlocked()||isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); _navReady=true; return; }
   if(isKeyLocked()){ renderKeyBlockedScreen(); _navReady=true; return; }
   if(isClosureDay()){ renderClosureScreen(); _navReady=true; return; }
   if(!isSignedIn()||!hasActiveSession()){ setScreen('my'); renderMy(); _navReady=true; return; }
-  if(fbReady){ fbEnsureThread().then(()=>checkRemoteActivation().then(()=>refreshChatBadge())); }
   switchTab('book');
   _navReady=true;
 })();
@@ -1510,11 +1481,12 @@ Object.assign(window, {
   renderAdminSettings, saveAdminSettings, resetAdminSettings,
   renderAdminStats, renderAdminContentManager, renderAdminTutorials,
   renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit,
-  adminResetUserPw, adminDeleteUser, adminActivateThisUser,
+  adminDeleteUser, adminActivateThisUser,
   renderAdminRegisteredPhones, confirmRemovePhone, adminManualAddPhone,
   adminTap, syncNow, exportContentForShipping, copyExport, clearDraftContent,
   saveTutorialSettings, renderEnterKey, submitLicenseKey, goBack,
   renderAdminActivateUser, adminPickUserForActivation, adminGenerateActivationKey, adminCopyKey,
+  adminShowMasterKey,
   renderAdminBulkAdd, adminSubmitBulk,
   renderAdminGeneralExams, adminAddGeneralSubject, adminEditGeneralSubject,
   adminDeleteGeneralSubject, adminSaveGeneralSubject,
@@ -1522,10 +1494,7 @@ Object.assign(window, {
   isTrialContentAllowed, isTrialLockedUniversity, trialSubjectRx, renderTrialContentLocked, renderTrialLockedUniversity,
   adminAddBook, adminDeleteBook, adminSaveBook, adminAddNote, adminDeleteNote, adminSaveNote,
   adminAddExam, adminDeleteExam, adminSaveExam, formatQuestionsForEdit,
-  toggleChatMenu, openAdminChat, openSupportGroup, renderChatScreen, sendChatMessage,
-  initFirebase, fbEnsureThread, fbPushMessage, fbListenMessages, fbListenThreadMeta,
-  fbMarkUserRead, fbSetTyping, fbUploadImage, fbThreadUnreadCount, adminUploadContentFile,
-  checkRemoteActivation, renderChatMessages, handleUserTyping, handleChatImage, refreshChatBadge,
+  openSupportGroup,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays
 });
 </script>
@@ -1540,4 +1509,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
-</html>
+ </html>
