@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v13-2026-09-23';
+const CACHE_VERSION = 'v14-2026-09-23';
 const CACHE_NAME = 'freshman-hub-' + CACHE_VERSION;
 const CACHE_URLS = ['./','./index.html','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => Promise.all(CACHE_URLS.map(url => cache.add(url).catch(err => console.log('Skip:', url, err))))).then(() => self.skipWaiting())); });
