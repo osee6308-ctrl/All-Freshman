@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "updated": "2026-09-25",
+  "blacklist": [],
+  "notifications": [],
+  "tutorials": {
+    "register": { "title": "How to register", "url": "" },
+    "pay": { "title": "How to pay", "url": "" }
+  },
+  "settings": {},
+  "registeredPhones": [],
+  "universityInfo": {},
+  "generalSubjects": {},
+  "universities": {
+    "Arsi University": {
+      "Natural": {
+        "1": {
+          "pdfs": [],
+          "notes": [],
+          "exams": [],
+          "cocs": []
+        },
+        "2": {
+          "pdfs": [],
+          "notes": [],
+          "exams": [],
+          "cocs": []
+        }
+      },
+      "Social": {
+        "1": {
+          "pdfs": [],
+          "notes": [],
+          "exams": [],
+          "cocs": []
+        },
+        "2": {
+          "pdfs": [],
+          "notes": [],
+          "exams": [],
+          "cocs": []
+        }
+      }
+    }
+  }
+}

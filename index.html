@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>All Freshman ET</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6a3093">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="All Freshman">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093);
+    color:#fff;
+    font-family:system-ui,-apple-system,sans-serif;
+    text-align:center;
+    padding:20px;
+  }
+  .icon-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    border: 3px solid rgba(255,255,255,.25);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  h1 { font-size:20px; margin-bottom:8px; font-weight:800; }
+  p { font-size:13.5px; opacity:.85; line-height:1.6; }
+  .bar { width:180px; height:4px; margin:18px auto 0; background:rgba(255,255,255,.2); border-radius:10px; overflow:hidden; }
+  .bar span { display:block; height:100%; width:40%; background:#fff; border-radius:10px; animation:slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(250%)} }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+</style>
+</head>
+<body>
+<div>
+  <img class="icon-img" src="logo.png" alt="All Freshman ET">
+  <h1>All Freshman ET</h1>
+  <p>Loading your study hub…</p>
+  <div class="bar"><span></span></div>
+</div>
+<script>
+  (function(){
+    var go = function(){ location.replace('app.html'); };
+    if (document.readyState === 'complete') {
+      setTimeout(go, 900);
+    } else {
+      window.addEventListener('load', function(){ setTimeout(go, 900); });
+    }
+    setTimeout(go, 4000);
+  })();
+</script>
+</body>
+</html>
