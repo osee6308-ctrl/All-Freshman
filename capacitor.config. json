@@ -6,8 +6,5 @@
     "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
     "androidScheme": "https",
     "cleartext": false
-  },
-  "android": {
-    "allowMixedContent": false
   }
 }
