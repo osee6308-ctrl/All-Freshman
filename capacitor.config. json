@@ -1,7 +1,7 @@
 {
   "appId": "com.osee6308.allfreshman",
   "appName": "All Freshman ET",
-  "webDir": "www",
+  "webDir": ".",
   "server": {
     "url": "https://osee6308-ctrl.github.io/All-freshman-/",
     "androidScheme": "https",
