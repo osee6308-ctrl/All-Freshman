@@ -1,10 +1,7 @@
 {
   "name": "All Freshman ET",
   "short_name": "All Freshman",
-  "description": "Study app for Ethiopian university freshmen.
-All of Ethiopian university contents are exist in this app. 
-Example:module, note, exam,university info are provided for all university one by one by 'All Freshman'.
-GOOD LUCK!!!",
+  "description": "Study app for Ethiopian university freshmen. All of Ethiopian university contents are exist in this app. Example: module, note, exam, university info are provided for all university one by one by 'All Freshman'. GOOD LUCK!!!",
   "id": "/",
   "start_url": "./",
   "scope": "./",
