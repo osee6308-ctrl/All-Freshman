@@ -1,3 +1,3 @@
 #All-Freshman
-All Freshman ET PWA
+All-Freshman-ET PWA
 
