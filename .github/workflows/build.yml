@@ -39,6 +39,7 @@ jobs:
 
       - name: Add Android platform
         run: |
+          npx cap init "All Freshman ET" com.osee6308.allfreshman --web-dir . --force
           npx cap add android
           npx cap sync android
 
