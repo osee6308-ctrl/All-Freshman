@@ -13,82 +13,82 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
+          cache: npm
 
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Accept Android licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      - uses: android-actions/setup-android@v3
 
-      - name: Install npm packages
-        run: |
-          npm init -y
-          npm install @capacitor/core@^6.2.0 @capacitor/android@^6.2.0 @capacitor/cli@^6.2.0
+      - name: Install dependencies
+        run: npm install
 
-      - name: Create Capacitor config and shell
+      - name: Restore keystore (stable signing key)
         run: |
-          mkdir -p shell
-          cat > shell/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>All Freshman ET</title></head>
-          <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3c72,#6a3093);color:#fff;font-family:system-ui,sans-serif;text-align:center;"><div><div style="font-size:56px;">🎓</div><h1>All Freshman ET</h1><p style="opacity:.85;">Loading…</p></div></body></html>
-          EOF
-          cat > capacitor.config.json << 'EOF'
-          {
-            "appId": "com.osee6308.allfreshman",
-            "appName": "All Freshman ET",
-            "webDir": "shell",
-            "server": {
-              "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
-              "androidScheme": "https",
-              "cleartext": false
-            }
-          }
-          EOF
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android-keystore.jks
+          test -s android-keystore.jks || (echo "Keystore missing — set KEYSTORE_BASE64 secret" && exit 1)
 
       - name: Add Android platform
         run: |
-          npx cap add android
+          npx cap add android || true
           npx cap sync android
-
-      - name: Generate keystore
-        run: |
-          keytool -genkey -v \
-            -keystore android-keystore.jks \
-            -alias allfreshman \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -dname "CN=All Freshman ET, OU=Mobile, O=Osee, L=Addis Ababa, ST=Addis Ababa, C=ET"
 
       - name: Patch MainActivity with FLAG_SECURE
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
-          sed -i 's|import com.getcapacitor.BridgeActivity;|import android.view.WindowManager;\nimport com.getcapacitor.BridgeActivity;|' "$FILE"
-          sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);|' "$FILE"
+          echo "Patching: $FILE"
+
+          # Add WindowManager import if not already present
+          grep -q "import android.view.WindowManager;" "$FILE" || \
+            sed -i 's|import com.getcapacitor.BridgeActivity;|import android.view.WindowManager;\nimport com.getcapacitor.BridgeActivity;|' "$FILE"
+
+          # Add FLAG_SECURE inside onCreate if not already present
+          grep -q "FLAG_SECURE" "$FILE" || \
+            sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);|' "$FILE"
+
+          # Fail loudly if the patch didn't stick
+          grep -q "FLAG_SECURE" "$FILE" || (echo "PATCH FAILED — MainActivity not modified" && exit 1)
+          grep -q "import android.view.WindowManager;" "$FILE" || (echo "IMPORT FAILED" && exit 1)
+
+          echo "----- MainActivity.java (verify) -----"
+          sed -n '1,40p' "$FILE"
+
+      - name: Build signed AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/android-keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Build signed APK
+        working-directory: android
         run: |
-          cd android
-          chmod +x gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=../android-keystore.jks \
-            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -Pandroid.injected.signing.key.alias=allfreshman \
-            -Pandroid.injected.signing.key.password="${{ secrets.KEYSTORE_PASSWORD }}"
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/android-keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AllFreshman-APK
           path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
-      - name: Upload keystore
+      - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: AllFreshman-KEYSTORE
-          path: android-keystore.jks
+          name: AllFreshman-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: Cleanup keystore from runner
+        if: always()
+        run: rm -f android-keystore.jks
