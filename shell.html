@@ -12,60 +12,64 @@
 <meta name="apple-mobile-web-app-title" content="All Freshman">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
+  html, body { height: 100%; overflow: hidden; }
   body {
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093);
-    color:#fff;
-    font-family:system-ui,-apple-system,sans-serif;
-    text-align:center;
-    padding:20px;
-    -webkit-user-select:none;
-    user-select:none;
-  }
-  .shell-wrap {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    animation: fadeIn .5s ease;
-  }
-  @keyframes fadeIn {
-    from { opacity:0; transform: translateY(8px); }
-    to   { opacity:1; transform: translateY(0); }
-  }
-  .logo {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 18px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.35);
-    border: 3px solid rgba(255,255,255,.25);
-    animation: pulse 1.4s ease-in-out infinite;
-    background: #1e3c72;
-  }
-  .logo-fallback {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    margin-bottom: 18px;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 56px;
+    background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093);
+    color: #fff;
+    font-family: system-ui,-apple-system,sans-serif;
+    text-align: center;
+    padding: 20px;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .shell-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn .5s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === LOGO (image) === */
+  .logo {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 34px rgba(0,0,0,.4);
+    border: 4px solid rgba(255,255,255,.30);
+    animation: pulse 1.4s ease-in-out infinite;
+    background: #1e3c72;
+    display: block;
+  }
+
+  /* === FALLBACK (emoji) === */
+  .logo-fallback {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 62px;
     background: rgba(255,255,255,.12);
-    border: 3px solid rgba(255,255,255,.25);
-    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    border: 4px solid rgba(255,255,255,.25);
+    box-shadow: 0 10px 34px rgba(0,0,0,.4);
     animation: pulse 1.4s ease-in-out infinite;
   }
+
   h1 {
-    font-size: 20px;
+    font-size: 21px;
     margin-bottom: 8px;
     font-weight: 800;
     letter-spacing: .3px;
@@ -78,7 +82,7 @@
   .bar {
     width: 180px;
     height: 4px;
-    margin: 20px auto 0;
+    margin: 22px auto 0;
     background: rgba(255,255,255,.2);
     border-radius: 10px;
     overflow: hidden;
@@ -106,14 +110,17 @@
   }
   @keyframes pulse {
     0%,100% { transform: scale(1); }
-    50%     { transform: scale(1.08); }
+    50%     { transform: scale(1.06); }
   }
 </style>
 </head>
 <body>
   <div class="shell-wrap">
-    <img class="logo" src="logo.png" alt="All Freshman ET"
-         onerror="this.outerHTML='<div class=&quot;logo-fallback&quot;>🎓</div>'">
+    <img
+      class="logo"
+      src="logo.png"
+      alt="All Freshman ET"
+      onerror="this.outerHTML='<div class=&quot;logo-fallback&quot;>🎓</div>'">
     <h1>All Freshman ET</h1>
     <p>Loading your study hub…</p>
     <div class="bar"><span></span></div>
@@ -122,9 +129,9 @@
 
 <script>
   (function () {
-    var TARGET = 'app.html';       // main app file
-    var MIN_MS = 700;              // minimum time to show splash
-    var MAX_MS = 4000;             // hard safety timeout
+    var TARGET = 'app.html';
+    var MIN_MS = 700;
+    var MAX_MS = 4000;
     var started = Date.now();
 
     function go() {
@@ -136,7 +143,7 @@
       }, wait);
     }
 
-    // Prefetch app.html while splash is showing — faster perceived load
+    // Prefetch app.html while splash shows — faster perceived load
     try {
       var link = document.createElement('link');
       link.rel = 'prefetch';
