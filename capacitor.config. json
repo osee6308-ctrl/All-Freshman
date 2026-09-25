@@ -3,7 +3,7 @@
   "appName": "All Freshman ET",
   "webDir": ".",
   "server": {
-    "url": "https://osee6308-ctrl.github.io/All-freshman-/",
+    "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
     "androidScheme": "https",
     "cleartext": false
   },
