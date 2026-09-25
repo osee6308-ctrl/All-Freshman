@@ -31,8 +31,8 @@ jobs:
             -keystore android-keystore.jks \
             -alias allfreshman \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass allfreshman123 \
-            -keypass allfreshman123 \
+            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
+            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
             -dname "CN=All Freshman ET, OU=Mobile, O=Osee, L=Addis Ababa, ST=Addis Ababa, C=ET"
 
       - name: Add Android platform
@@ -52,18 +52,18 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file=../android-keystore.jks \
-            -Pandroid.injected.signing.store.password=allfreshman123 \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=allfreshman \
-            -Pandroid.injected.signing.key.password=allfreshman123
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Build signed APK
         run: |
           cd android
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=../android-keystore.jks \
-            -Pandroid.injected.signing.store.password=allfreshman123 \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=allfreshman \
-            -Pandroid.injected.signing.key.password=allfreshman123
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
