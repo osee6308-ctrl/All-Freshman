@@ -44,6 +44,28 @@ jobs:
               -dname "CN=All Freshman ET, OU=Mobile, O=Osee, L=Addis Ababa, ST=Addis Ababa, C=ET"
           fi
 
+      - name: Force-create Capacitor config
+        run: |
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.osee6308.allfreshman",
+            "appName": "All Freshman ET",
+            "webDir": "www",
+            "server": {
+              "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
+              "androidScheme": "https",
+              "cleartext": false
+            },
+            "android": {
+              "allowMixedContent": false
+            }
+          }
+          EOF
+          echo "----- capacitor.config.json content -----"
+          cat capacitor.config.json
+          echo "----- verifying appId -----"
+          grep -q "appId" capacitor.config.json && echo "OK: appId present"
+
       - name: Add Android platform
         run: |
           npx cap add android || true
