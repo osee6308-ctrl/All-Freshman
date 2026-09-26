@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-25",
+  "updated": "2026-09-26",
   "blacklist": [],
   "notifications": [],
   "tutorials": {
@@ -12,35 +12,201 @@
   "universityInfo": {},
   "generalSubjects": {},
   "universities": {
+    "Addis Ababa University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "University of Gondar": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Jimma University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Bahir Dar University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Mekelle University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Hawassa University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Haramaya University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Adama Science and Technology University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Addis Ababa Science and Technology University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Arba Minch University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Dire Dawa University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Jigjiga University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Debre Birhan University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Wolaita Sodo University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Debark University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Dilla University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Wollo University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Debre Markos University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Ethiopian Civil Service University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Kotebe Education University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Mattu University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
     "Arsi University": {
-      "Natural": {
-        "1": {
-          "pdfs": [],
-          "notes": [],
-          "exams": [],
-          "cocs": []
-        },
-        "2": {
-          "pdfs": [],
-          "notes": [],
-          "exams": [],
-          "cocs": []
-        }
-      },
-      "Social": {
-        "1": {
-          "pdfs": [],
-          "notes": [],
-          "exams": [],
-          "cocs": []
-        },
-        "2": {
-          "pdfs": [],
-          "notes": [],
-          "exams": [],
-          "cocs": []
-        }
-      }
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Madda Walabu University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Ambo University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Wachamo University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Aksum University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Wolkite University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Adigrat University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Woldia University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Assosa University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Wollega University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Samara University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Mizan-Tepi University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Bule Hora University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Debre Tabor University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Werabe University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Bonga University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Injibara University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Kebri Dehar University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Oda Bultum University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Oromia State University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Gambella University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Raya University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Selale University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Mekdela Amba University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Jinka University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Dembi Dolo University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Borena University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
+    },
+    "Ethiopian Police University": {
+      "Natural": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } },
+      "Social": { "1": { "pdfs": [], "notes": [], "exams": [], "cocs": [] }, "2": { "pdfs": [], "notes": [], "exams": [], "cocs": [] } }
     }
   }
-}
+      }
