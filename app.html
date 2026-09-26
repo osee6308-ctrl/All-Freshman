@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>All Freshman ET</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#6a3093">
@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
+  html { zoom: 1; }
   body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; }
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -174,6 +175,28 @@
 
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ============ DISPLAY SIZE (global zoom) ============ */
+(function(){
+  function applyZoom(v){
+    v = String(v);
+    try { localStorage.setItem('app_zoom', v); } catch(e){}
+    document.documentElement.style.zoom = v;
+    if (document.body) document.body.style.zoom = v;
+  }
+  window.setAppZoom = function(v){
+    applyZoom(v);
+    if (typeof window.renderMy === 'function') window.renderMy();
+  };
+  window.getAppZoom = function(){
+    return parseFloat(localStorage.getItem('app_zoom') || '1');
+  };
+  window._applySavedZoom = function(){
+    applyZoom(localStorage.getItem('app_zoom') || '1');
+  };
+  // Apply on load
+  applyZoom(localStorage.getItem('app_zoom') || '1');
+})();
 
 const DEFAULT_CONFIG = {
   TRIAL_DAYS: 3, LICENSE_DAYS: 365, SESSION_DAYS: 365, PRICE_BIRR: 200, OWNER_NAME: "Osama Abdi",
@@ -565,7 +588,6 @@ function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.
 
 const SS_ALLOWED_SCREENS=['payment','payment-proof','payment-upload','my','register','auth','chat'];
 function setScreen(name){
-  // Save scroll position of the screen we're leaving (forward nav only)
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) {
     scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   }
@@ -582,7 +604,6 @@ function setScreen(name){
   currentScreen = name;
   updateScreenshotGuard();
   if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){ try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){} }
-  // AUTO-SCROLL OMITTED — do not jump to top on screen change
 }
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
@@ -629,7 +650,6 @@ function _renderScreenByName(name){
     case 'note-viewer': if (_viewerState && _viewerState.type === 'note') _renderNoteViewerDirect(); else renderNotesHome(); break;
     default: switchTab(_lastBaseTab); return;
   }
-  // Restore scroll for the screen we just rendered
   const y = scrollMemory[name] || 0;
   setTimeout(()=>{ try { window.scrollTo(0, y); } catch(e){} }, 30);
 }
@@ -765,7 +785,6 @@ function renderHeader(activeTab, opts){
   return '<div class="app-header"><div class="ht"><h1>'+CONFIG.APP_NAME+'</h1><p>'+escapeHtml(subtitle)+'</p></div><div class="hdr-actions">'+themeBtn+bell+'</div></div>';
 }
 function renderBottomNav(activeTab){
-  // COC tab is only shown in 1st semester
   const sem = getCurrentSemester();
   const tabs = [
     { id:'book', label:'Modules', ico:'📚' },
@@ -918,7 +937,6 @@ function setBookZoom(z){
 }
 function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
 
-/* ============ MODULES (was Book) ============ */
 function renderBooksHome(){
   if(isAdminMode()){ renderAdminContentManager('book'); return; }
   if(!isSignedIn() || !hasActiveSession()){
@@ -1052,7 +1070,6 @@ function renderExamList(uni){
 function startUniExam(uni,stream,sem,i){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; } const c=getUniContent(uni,stream,sem); const ex=c.exams[i]; if(!ex) return; const hasQ=ex.questions&&ex.questions.length; const hasFile=!!ex.url; if(hasQ&&!hasFile){ const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); return; } if(!hasQ&&hasFile){ window.open(ex.url,'_blank'); return; } if(hasQ&&hasFile){ appConfirm('This exam has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(ex.url,'_blank'); return; } const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); }); } }
 function startBuiltInExam(key){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } const s=getGeneralSubjects()[key]; if(!s) return; startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES); }
 
-/* ============ COC HOME (1st semester only) ============ */
 function renderCocHome(){
   if(getCurrentSemester() !== 1){
     setScreen('coc-home');
@@ -1165,10 +1182,12 @@ function renderMy(introMsg){
   else { const tSub = escapeHtml(trialSubjectsDisplay()); const tUni = escapeHtml(trialUnisDisplay()); const tContent = (CONFIG.TRIAL_CONTENT||[]).map(k=>({book:'Modules',note:'Note',exam:'Exam',coc:'COC',info:'Info'})[k]||k).join(' + '); licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Trial — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left<br><span style="font-weight:600; font-size:12px;">Includes: '+escapeHtml(tContent)+'<br>Universities: '+tUni+'<br>Practice subjects: '+tSub+'</span></div>'; }
   const sessLeft = sessionDaysLeft();
   const phone = (CONFIG.CONTACT_PHONE || '').trim();
+  const z = getAppZoom();
   app.innerHTML=renderHeader('my')+intro+
     '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
     '<div class="panel"><h2>Theme</h2><div style="display:flex; gap:8px;"><button onclick="setTheme(\'light\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='light'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='light'?'#6a3093':'#fff')+'; color:'+(theme==='light'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">☀️ Light</button><button onclick="setTheme(\'dark\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='dark'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='dark'?'#6a3093':'#fff')+'; color:'+(theme==='dark'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">🌙 Dark</button></div></div>'+
+    '<div class="panel"><h2>Display Size</h2><div style="display:flex; gap:8px;">'+['0.9','1','1.15','1.3'].map(function(v){ var labels = {'0.9':'Small','1':'Normal','1.15':'Large','1.3':'Extra'}; var active = Math.abs(z - parseFloat(v)) < 0.01; return '<button onclick="setAppZoom('+v+')" style="flex:1; padding:12px 6px; border:2px solid '+(active?'#6a3093':'#e0e0e6')+'; background:'+(active?'#6a3093':'#fff')+'; color:'+(active?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer; font-size:12px;">'+labels[v]+'</button>'; }).join('')+'</div><p style="font-size:11.5px; color:#888; margin-top:8px; text-align:center;">Changes apply instantly across all screens.</p></div>'+
     '<div class="panel"><h2>License</h2>'+licenseBox+'<button class="btn btn-full" style="margin-top:14px; padding:14px; font-size:15px; font-weight:800; '+(access.status==='licensed' ? 'background:#4caf50; color:#fff;' : 'background:#ff4757; color:#fff;')+'" onclick="showActivationStatus()">'+(access.status==='licensed' ? '✅ Active' : '❌ Inactive')+'</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderEnterKey()">Enter License Key</button></div>'+
     '<div class="panel"><h2>Tutorials</h2>'+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'</div>'+
     (isAdminMode() ? '<div class="panel"><h2>Progress (admin view)</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Average</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Best</div></div></div><button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="renderProgress()">View history</button></div>' : '')+
@@ -1280,67 +1299,29 @@ function renderAdminActivateUser(){
     '<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button>'+
     '</div>'+renderBottomNav('my')+renderChatFab();
 }
-
-function adminPickUserForActivation(sel){
-  const h = sel.value;
-  const inp = document.getElementById('actDeviceHash');
-  if(inp && h) inp.value = h;
-}
-
+function adminPickUserForActivation(sel){ const h = sel.value; const inp = document.getElementById('actDeviceHash'); if(inp && h) inp.value = h; }
 function adminGenerateActivationKey(){
-  const hashEl = document.getElementById('actDeviceHash');
-  const secEl = document.getElementById('actSecret');
-  const out = document.getElementById('actResult');
-  const hash = (hashEl.value||'').trim().toUpperCase();
-  const secret = (secEl.value||'').trim() || CONFIG.SECRET;
+  const hashEl = document.getElementById('actDeviceHash'); const secEl = document.getElementById('actSecret'); const out = document.getElementById('actResult');
+  const hash = (hashEl.value||'').trim().toUpperCase(); const secret = (secEl.value||'').trim() || CONFIG.SECRET;
   if(!/^[A-Z0-9]{4}$/.test(hash)){ out.innerHTML='<div style="color:#c62828;font-weight:700;">Device hash must be exactly 4 letters/numbers.</div>'; return; }
   const pickSel = document.getElementById('actPickUser');
   const uPhone = pickSel && pickSel.selectedOptions[0] ? (pickSel.selectedOptions[0].dataset.phone||'') : '';
   const uName = uPhone && getUsers()[uPhone] ? getUsers()[uPhone].name : '';
   function rnd4(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
-  const c = rnd4();
-  const b = simpleHash(secret + hash + c).slice(0,4).toUpperCase().padStart(4,'0');
-  const key = 'FH-'+hash+'-'+b+'-'+c;
-  try {
-    const list = JSON.parse(localStorage.getItem(LS_ADMIN_KEYS)||'[]');
-    list.unshift({ key:key, hash:hash, name:uName, phone:uPhone, at:Date.now() });
-    localStorage.setItem(LS_ADMIN_KEYS, JSON.stringify(list.slice(0,50)));
-  } catch(e){}
+  const c = rnd4(); const b = simpleHash(secret + hash + c).slice(0,4).toUpperCase().padStart(4,'0'); const key = 'FH-'+hash+'-'+b+'-'+c;
+  try { const list = JSON.parse(localStorage.getItem(LS_ADMIN_KEYS)||'[]'); list.unshift({ key:key, hash:hash, name:uName, phone:uPhone, at:Date.now() }); localStorage.setItem(LS_ADMIN_KEYS, JSON.stringify(list.slice(0,50))); } catch(e){}
   const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your All Freshman ET activation key:');
-  out.innerHTML =
-    '<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:14px;padding:18px;text-align:center;">'+
-    '<div style="font-size:11px;color:#2e7d32;font-weight:800;letter-spacing:1px;margin-bottom:8px;">LICENSE KEY</div>'+
-    '<div style="font-family:monospace;font-size:22px;font-weight:900;color:#2e7d32;letter-spacing:2px;word-break:break-all;margin-bottom:14px;">'+key+'</div>'+
-    (uName?'<div style="font-size:12px;color:#666;margin-bottom:10px;">For: '+escapeHtml(uName)+'</div>':'')+
-    '<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Key</button>'+
-    '<a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a>'+
-    '</div>';
+  out.innerHTML = '<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:14px;padding:18px;text-align:center;"><div style="font-size:11px;color:#2e7d32;font-weight:800;letter-spacing:1px;margin-bottom:8px;">LICENSE KEY</div><div style="font-family:monospace;font-size:22px;font-weight:900;color:#2e7d32;letter-spacing:2px;word-break:break-all;margin-bottom:14px;">'+key+'</div>'+(uName?'<div style="font-size:12px;color:#666;margin-bottom:10px;">For: '+escapeHtml(uName)+'</div>':'')+'<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Key</button><a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a></div>';
 }
-
 function adminShowMasterKey(){
   if(!isAdminMode()) return;
-  const out = document.getElementById('actResult');
-  const key = 'MASTER-UNBLOCK-ALL';
+  const out = document.getElementById('actResult'); const key = 'MASTER-UNBLOCK-ALL';
   const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your All Freshman ET master unlock code:');
   if(out){
-    out.innerHTML =
-      '<div style="background:#fff3cd;border:2px solid #ff9800;border-radius:14px;padding:18px;text-align:center;">'+
-      '<div style="font-size:11px;color:#856404;font-weight:800;letter-spacing:1px;margin-bottom:8px;">MASTER KEY — USE ONLY IN EMERGENCIES</div>'+
-      '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#856404;letter-spacing:2px;word-break:break-all;margin-bottom:12px;">'+key+'</div>'+
-      '<div style="font-size:12px;color:#856404;line-height:1.7;margin-bottom:12px;">Works on <strong>any device</strong>. User enters it in <em>My → Enter License Key</em> and gets unlimited access forever.<br><br>⚠️ Give only to trusted users — it can\'t be revoked.</div>'+
-      '<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Master Key</button>'+
-      '<a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a>'+
-      '</div>';
+    out.innerHTML = '<div style="background:#fff3cd;border:2px solid #ff9800;border-radius:14px;padding:18px;text-align:center;"><div style="font-size:11px;color:#856404;font-weight:800;letter-spacing:1px;margin-bottom:8px;">MASTER KEY — USE ONLY IN EMERGENCIES</div><div style="font-family:monospace;font-size:20px;font-weight:900;color:#856404;letter-spacing:2px;word-break:break-all;margin-bottom:12px;">'+key+'</div><div style="font-size:12px;color:#856404;line-height:1.7;margin-bottom:12px;">Works on <strong>any device</strong>. User enters it in <em>My → Enter License Key</em> and gets unlimited access forever.<br><br>⚠️ Give only to trusted users — it can\'t be revoked.</div><button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Master Key</button><a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a></div>';
   }
 }
-
-function adminCopyKey(key){
-  try { navigator.clipboard.writeText(key); appAlert('✅ Key copied:\n'+key); }
-  catch(e){
-    const ta = document.createElement('textarea'); ta.value = key; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-    appAlert('✅ Key copied:\n'+key);
-  }
-}
+function adminCopyKey(key){ try { navigator.clipboard.writeText(key); appAlert('✅ Key copied:\n'+key); } catch(e){ const ta = document.createElement('textarea'); ta.value = key; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); appAlert('✅ Key copied:\n'+key); } }
 
 function renderPaymentMethodRow(m){
   return '<div class="pay-method-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">'
@@ -1349,29 +1330,9 @@ function renderPaymentMethodRow(m){
     + '<button type="button" class="btn btn-danger" style="padding:8px 12px;width:auto;min-width:auto;margin:0;" onclick="removePaymentMethod(this)">X</button>'
     + '</div>';
 }
-function addPaymentMethod(){
-  const list = document.getElementById('payMethodsList');
-  if (!list) return;
-  const count = list.querySelectorAll('.pay-method-row').length;
-  if (count >= 6) return appAlert('Maximum 6 payment methods.');
-  const wrap = document.createElement('div');
-  wrap.innerHTML = renderPaymentMethodRow({name:'', number:''});
-  list.appendChild(wrap.firstChild);
-}
-function removePaymentMethod(btn){
-  const list = document.getElementById('payMethodsList');
-  if (!list) return;
-  const count = list.querySelectorAll('.pay-method-row').length;
-  if (count <= 1) return appAlert('At least one payment method required.');
-  const row = btn.closest('.pay-method-row');
-  if (row) row.remove();
-}
-function trialUniCheckboxes(unis, selected){
-  return (unis||[]).map((u,i)=>{
-    const on = (selected||[]).indexOf(u) !== -1;
-    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;background:'+(on?'#f0e9f8':'transparent')+';font-weight:'+(on?'700':'400')+';"><input type="checkbox" data-trialuni="'+escapeAttr(u)+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+escapeHtml(u)+'</label>';
-  }).join('');
-}
+function addPaymentMethod(){ const list = document.getElementById('payMethodsList'); if (!list) return; const count = list.querySelectorAll('.pay-method-row').length; if (count >= 6) return appAlert('Maximum 6 payment methods.'); const wrap = document.createElement('div'); wrap.innerHTML = renderPaymentMethodRow({name:'', number:''}); list.appendChild(wrap.firstChild); }
+function removePaymentMethod(btn){ const list = document.getElementById('payMethodsList'); if (!list) return; const count = list.querySelectorAll('.pay-method-row').length; if (count <= 1) return appAlert('At least one payment method required.'); const row = btn.closest('.pay-method-row'); if (row) row.remove(); }
+function trialUniCheckboxes(unis, selected){ return (unis||[]).map((u,i)=>{ const on = (selected||[]).indexOf(u) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;background:'+(on?'#f0e9f8':'transparent')+';font-weight:'+(on?'700':'400')+';"><input type="checkbox" data-trialuni="'+escapeAttr(u)+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+escapeHtml(u)+'</label>'; }).join(''); }
 
 function renderAdminSettings(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -1385,52 +1346,37 @@ function renderAdminSettings(){
     '<label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'">'+
     '<label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'">'+
     '<label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'">'+
-    '<div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-top:6px;line-height:1.6;">Visible to all users. Empty = hidden.</div>'+
     '<label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'">'+
     '<label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup">'+
     '<h3>Payment Methods (1–6)</h3>'+
     '<label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'">'+
-    '<div style="height:12px;"></div>'+
     '<label class="field-label">Methods</label>'+
-    '<div id="payMethodsList">'+
-      pmList.map(m=>renderPaymentMethodRow(m)).join('')+
-    '</div>'+
+    '<div id="payMethodsList">'+pmList.map(m=>renderPaymentMethodRow(m)).join('')+'</div>'+
     '<button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button>'+
-    '<div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Maximum 6 methods. Minimum 1. These are only shown to you when you tap 📋 Copy Payment Details.</div>'+
     '<h3>Rules</h3>'+
     '<label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365">'+
     '<label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650">'+
     '<label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650">'+
     '<label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10">'+
     '<h3>Trial Configuration</h3>'+
-    '<label class="field-label">Trial Universities (check all that apply)</label>'+
-    '<div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+
-      trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES)+
-    '</div>'+
+    '<label class="field-label">Trial Universities</label>'+
+    '<div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES)+'</div>'+
     '<label class="field-label" style="margin-top:16px;">Trial Content</label>'+
-    chk('book','📚 Modules')+
-    chk('note','📝 Note')+
-    chk('exam','📋 Exam')+
-    chk('coc','🎯 COC (1st semester only)')+
-    chk('info','🏛️ University Info')+
+    chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC (1st semester only)')+chk('info','🏛️ University Info')+
     '<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label>'+
-    '<input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math">'+
-    '<div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Separate multiple subjects with commas. Applies to modules, notes, and general practice exams.</div>'+
-    '<label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated, optional)</label>'+
-    '<input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, chapter 1, sample">'+
-    '<div style="font-size:11.5px;color:#1565c0;background:#e3f2fd;border-left:4px solid #2196f3;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Leave empty to use <strong>Trial Subjects</strong> filter for exams.<br>Fill in to override — only exams whose <strong>name contains</strong> any keyword will be unlocked in trial.</div>'+
-    '<label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated, optional)</label>'+
-    '<input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="chapter 1, summary">'+
-    '<div style="font-size:11.5px;color:#1565c0;background:#e3f2fd;border-left:4px solid #2196f3;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Leave empty to use <strong>Trial Subjects</strong> filter for notes.<br>Fill in to override — only notes whose <strong>title contains</strong> any keyword will be unlocked in trial.</div>'+
-    '<label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated, optional)</label>'+
-    '<input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="chapter 1, coc basic">'+
-    '<div style="font-size:11.5px;color:#1565c0;background:#e3f2fd;border-left:4px solid #2196f3;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6;">Leave empty to use <strong>Trial Subjects</strong> filter for COC.<br>Fill in to override — only COC items whose <strong>name contains</strong> any keyword will be unlocked in trial.</div>'+
+    '<input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'">'+
+    '<label class="field-label" style="margin-top:16px;">Trial Exam Keywords (optional)</label>'+
+    '<input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'">'+
+    '<label class="field-label" style="margin-top:16px;">Trial Note Keywords (optional)</label>'+
+    '<input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'">'+
+    '<label class="field-label" style="margin-top:16px;">Trial COC Keywords (optional)</label>'+
+    '<input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'">'+
     '<h3>Universities</h3>'+
     '<label class="field-label">University Names (one per line)</label>'+
     '<textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea>'+
     '<h3>Security</h3>'+
     '<label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'">'+
-    '<label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/Freshman-hub">'+
+    '<label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/">'+
     '<button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
@@ -1446,13 +1392,8 @@ async function saveAdminSettings(){
   s.PRICE_BIRR=parseInt(document.getElementById('stPrice').value)||DEFAULT_CONFIG.PRICE_BIRR;
   const pmRows = document.querySelectorAll('#payMethodsList .pay-method-row');
   const payMethods = [];
-  pmRows.forEach(r => {
-    const name = (r.querySelector('.pmName').value||'').trim();
-    const number = (r.querySelector('.pmNumber').value||'').trim();
-    if (name && number) payMethods.push({name, number});
-  });
+  pmRows.forEach(r => { const name = (r.querySelector('.pmName').value||'').trim(); const number = (r.querySelector('.pmNumber').value||'').trim(); if (name && number) payMethods.push({name, number}); });
   if (payMethods.length === 0) { await appAlert('Add at least one payment method.'); return; }
-  if (payMethods.length > 6) { await appAlert('Maximum 6 payment methods.'); return; }
   s.PAYMENT_METHODS = payMethods;
   s.TRIAL_DAYS=parseInt(document.getElementById('stTrialDays').value)||DEFAULT_CONFIG.TRIAL_DAYS;
   s.LICENSE_DAYS=parseInt(document.getElementById('stLicenseDays').value)||DEFAULT_CONFIG.LICENSE_DAYS;
@@ -1466,15 +1407,9 @@ async function saveAdminSettings(){
   const subjRaw = (document.getElementById('stTrialSubjects').value||'english');
   const subjList = subjRaw.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
   s.TRIAL_SUBJECTS = subjList.length ? subjList : ['english'];
-  const kwEl = document.getElementById('stTrialExamKeywords');
-  const kwRaw = kwEl ? (kwEl.value||'') : '';
-  s.TRIAL_EXAM_KEYWORDS = kwRaw.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-  const nkEl = document.getElementById('stTrialNoteKeywords');
-  const nkRaw = nkEl ? (nkEl.value||'') : '';
-  s.TRIAL_NOTE_KEYWORDS = nkRaw.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-  const ckEl = document.getElementById('stTrialCocKeywords');
-  const ckRaw = ckEl ? (ckEl.value||'') : '';
-  s.TRIAL_COC_KEYWORDS = ckRaw.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  s.TRIAL_EXAM_KEYWORDS = (document.getElementById('stTrialExamKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  s.TRIAL_NOTE_KEYWORDS = (document.getElementById('stTrialNoteKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  s.TRIAL_COC_KEYWORDS = (document.getElementById('stTrialCocKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
   const tc=[];
   ['book','note','exam','coc','info'].forEach(k=>{ const el=document.getElementById('stTrialContent_'+k); if(el&&el.checked) tc.push(k); });
   s.TRIAL_CONTENT=tc;
@@ -1497,27 +1432,17 @@ function renderAdminUsers(){
   const phones=Object.keys(u);
   app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — User Accounts</div><h2>User Accounts</h2><button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>'+(phones.length?phones.map(p=>{
     const user=u[p];
-    const uSessLeft = user.sessionExpiresAt ? Math.max(0, Math.ceil((user.sessionExpiresAt-Date.now())/86400000)) : '—';
     return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; font-size:12.5px;"><div style="font-weight:800; color:#333; margin-bottom:4px;">'+escapeHtml(user.name)+'</div><div><strong>Phone:</strong> '+escapeHtml(user.phone)+'</div><div><strong>University:</strong> '+escapeHtml(user.university)+'</div><div><strong>Stream:</strong> '+escapeHtml(user.stream)+'</div><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div style="margin-top:8px; display:flex; gap:6px;"><button class="btn btn-ghost" style="flex:1; padding:8px; font-size:12px;" onclick="openUserEditor(\''+escapeAttr(user.phone)+'\')">✎ Edit</button><button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px; background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate</button><button class="btn btn-danger" onclick="adminDeleteUser(\''+escapeAttr(user.phone)+'\')">Delete</button></div></div>';
   }).join(''):'<div class="empty-msg">No users registered on this device yet.</div>')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-
-function adminActivateThisUser(hash){
-  renderAdminActivateUser();
-  setTimeout(()=>{
-    const el = document.getElementById('actDeviceHash');
-    if(el && hash) el.value = hash;
-  }, 100);
-}
-
+function adminActivateThisUser(hash){ renderAdminActivateUser(); setTimeout(()=>{ const el = document.getElementById('actDeviceHash'); if(el && hash) el.value = hash; }, 100); }
 function renderAdminUserEditor(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-user-editor'); app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Search & Edit User</div><h2>🔎 Search & Edit User</h2><label class="field-label">User Phone Number</label><input type="tel" id="userSearchPhone" class="field-input" placeholder="09xxxxxxxx" style="margin-bottom:14px;"><button class="btn btn-primary btn-full" onclick="openUserEditor(document.getElementById(\'userSearchPhone\').value.trim())">🔎 Search</button><div id="userEditorResult" style="margin-top:16px;"></div><button class="btn btn-ghost btn-full" style="margin-top:20px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
 function openUserEditor(phone){
   if(!isAdminMode()) return;
   if(!/^(09|07)\d{8}$/.test(phone||'')) return appAlert('Enter valid phone (09/07 + 8 digits).');
   const u = getUsers(); const user = u[phone]; const result = document.getElementById('userEditorResult'); if(!result) return;
   if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+' on this device.</div>'; return; }
-  const uSessLeft = user.sessionExpiresAt ? Math.max(0, Math.ceil((user.sessionExpiresAt-Date.now())/86400000)) : '—';
-  result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div><div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;"><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div><div><strong>Session left:</strong> <span class="session-badge">'+uSessLeft+(typeof uSessLeft==='number'?' days':'')+'</span></div></div><button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button><label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'"><label class="field-label">Phone</label><input type="tel" id="editUserPhone" class="field-input" value="'+escapeAttr(user.phone||'')+'"><label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select><label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select><label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters"><label class="field-label">Reset Session Days (leave blank to keep)</label><input type="number" id="editUserSessionDays" class="field-input" placeholder="e.g. 365" min="1" max="3650"><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
+  result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div><div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;"><div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div><div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div></div><button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button><label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'"><label class="field-label">Phone</label><input type="tel" id="editUserPhone" class="field-input" value="'+escapeAttr(user.phone||'')+'"><label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select><label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select><label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters"><label class="field-label">Reset Session Days</label><input type="number" id="editUserSessionDays" class="field-input" placeholder="e.g. 365" min="1" max="3650"><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
 }
 async function saveUserEdit(oldPhone){
   if(!isAdminMode()) return;
@@ -1557,7 +1482,6 @@ function renderAdminContentManager(tab){
   if(!isAdminMode()){ renderMy(); return; }
   if(!tab) tab='exam';
   const sem = adminEditState.semester || 1;
-  // COC only available in 1st semester — if sem=2 and tab=coc, fallback to exam
   if (sem !== 1 && tab === 'coc') tab = 'exam';
   adminEditState.tab=tab;
   setScreen('admin-content');
@@ -1569,45 +1493,15 @@ function renderAdminContentManager(tab){
   const cocNotice = (sem !== 1) ? '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:10px 14px; font-size:12px; color:#1565c0; margin-bottom:12px; line-height:1.6;">COC is only available in <strong>1st Semester</strong>. Switch to 1st Sem above to manage COC.</div>' : '';
   app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">University</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div>'+cocNotice+'<div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabBtn+'</div><button class="btn btn-primary btn-full" style="margin-bottom:16px; background:#4caf50;" onclick="adminBulkState.uni=adminEditState.uni;adminBulkState.stream=adminEditState.stream;adminBulkState.semester=adminEditState.semester;renderAdminBulkAdd()">📦 Bulk Add (Modules + Note + Exam + COC)</button>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
-
-/* ============ ADMIN MODULES LIST (rich fields like Exam) ============ */
 function renderAdminBookList(uni,stream,sem,pdfs){
   const editing=adminEditState.editing;
-  const editorForm=(p,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Module Name</label><input type="text" id="editBookName" class="field-input" value="'+escapeAttr(p.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editBookChapter" class="field-input" value="'+escapeAttr(p.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editBookYear" class="field-input" value="'+escapeAttr(p.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Description</label><textarea id="editBookDesc" class="field-textarea" style="min-height:80px; margin-bottom:8px;">'+escapeHtml(p.description||'')+'</textarea><label class="field-label">URL (GitHub Raw link)</label><input type="url" id="editBookUrl" class="field-input" value="'+escapeAttr(p.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'book\')">Cancel</button></div></div>';
-  return '<h3>Add Module</h3><label class="field-label">Module Name</label><input type="text" id="pdfName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter (optional)</label><input type="text" id="pdfChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year (optional)</label><input type="text" id="pdfYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Description (optional)</label><textarea id="pdfDesc" placeholder="Short description" class="field-textarea" style="min-height:80px; margin-bottom:8px;"></textarea><label class="field-label">URL (GitHub Raw link)</label><input type="url" id="pdfUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><div style="font-size:11.5px;color:#856404;background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.6;">Upload PDF to GitHub repo <code>pdfs/</code> folder → right-click → Copy raw URL → paste above</div><button class="btn btn-primary btn-full" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Module</button>'+(pdfs.length?'<h3 style="margin-top:20px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit) return editorForm(p,i); const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : ''; const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : ''; const desc = p.description ? '<div style="font-size:11px; color:#666; margin-top:3px;">'+escapeHtml(p.description)+'</div>' : ''; return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+chapter+year+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(p.name)+'</span></div>'+desc+'<div style="font-size:11px; color:#888;">'+(p.url?'🔗 linked':'no URL')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'book\',index:'+i+'};renderAdminContentManager(\'book\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):'');
+  const editorForm=(p,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Module Name</label><input type="text" id="editBookName" class="field-input" value="'+escapeAttr(p.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editBookChapter" class="field-input" value="'+escapeAttr(p.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editBookYear" class="field-input" value="'+escapeAttr(p.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Description</label><textarea id="editBookDesc" class="field-textarea" style="min-height:80px; margin-bottom:8px;">'+escapeHtml(p.description||'')+'</textarea><label class="field-label">URL</label><input type="url" id="editBookUrl" class="field-input" value="'+escapeAttr(p.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'book\')">Cancel</button></div></div>';
+  return '<h3>Add Module</h3><label class="field-label">Module Name</label><input type="text" id="pdfName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter (optional)</label><input type="text" id="pdfChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year (optional)</label><input type="text" id="pdfYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Description (optional)</label><textarea id="pdfDesc" placeholder="Short description" class="field-textarea" style="min-height:80px; margin-bottom:8px;"></textarea><label class="field-label">URL</label><input type="url" id="pdfUrl" placeholder="https://..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Module</button>'+(pdfs.length?'<h3 style="margin-top:20px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit) return editorForm(p,i); const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : ''; const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : ''; return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+chapter+year+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(p.name)+'</span></div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'book\',index:'+i+'};renderAdminContentManager(\'book\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):'');
 }
-async function adminAddBook(uni,stream,sem){
-  const n=(document.getElementById('pdfName').value||'').trim();
-  const ch=(document.getElementById('pdfChapter').value||'').trim();
-  const y=(document.getElementById('pdfYear').value||'').trim();
-  const d=(document.getElementById('pdfDesc').value||'').trim();
-  const u=(document.getElementById('pdfUrl').value||'').trim();
-  if(!n) return appAlert('Enter module name');
-  if(!u) return appAlert('Paste the GitHub raw URL');
-  const c=getUniContent(uni,stream,sem);
-  c.pdfs.push({name:n, chapter:ch, year:y, description:d, url:u});
-  setUniContent(uni,stream,sem,c);
-  renderAdminContentManager('book');
-}
-async function adminSaveBook(uni,stream,sem,i){
-  const n=(document.getElementById('editBookName').value||'').trim();
-  const ch=(document.getElementById('editBookChapter').value||'').trim();
-  const y=(document.getElementById('editBookYear').value||'').trim();
-  const d=(document.getElementById('editBookDesc').value||'').trim();
-  const u=(document.getElementById('editBookUrl').value||'').trim();
-  if(!n) return appAlert('Enter name');
-  if(!u) return appAlert('Paste URL');
-  const c=getUniContent(uni,stream,sem);
-  if(!c.pdfs[i]) return;
-  c.pdfs[i]={name:n, chapter:ch, year:y, description:d, url:u};
-  setUniContent(uni,stream,sem,c);
-  adminEditState.editing=null;
-  await appAlert('Module updated!');
-  renderAdminContentManager('book');
-}
+async function adminAddBook(uni,stream,sem){ const n=(document.getElementById('pdfName').value||'').trim(); const ch=(document.getElementById('pdfChapter').value||'').trim(); const y=(document.getElementById('pdfYear').value||'').trim(); const d=(document.getElementById('pdfDesc').value||'').trim(); const u=(document.getElementById('pdfUrl').value||'').trim(); if(!n) return appAlert('Enter module name'); if(!u) return appAlert('Paste URL'); const c=getUniContent(uni,stream,sem); c.pdfs.push({name:n, chapter:ch, year:y, description:d, url:u}); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }
+async function adminSaveBook(uni,stream,sem,i){ const n=(document.getElementById('editBookName').value||'').trim(); const ch=(document.getElementById('editBookChapter').value||'').trim(); const y=(document.getElementById('editBookYear').value||'').trim(); const d=(document.getElementById('editBookDesc').value||'').trim(); const u=(document.getElementById('editBookUrl').value||'').trim(); if(!n) return appAlert('Enter name'); if(!u) return appAlert('Paste URL'); const c=getUniContent(uni,stream,sem); if(!c.pdfs[i]) return; c.pdfs[i]={name:n, chapter:ch, year:y, description:d, url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Module updated!'); renderAdminContentManager('book'); }
 function adminDeleteBook(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.pdfs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }); }
-
-function renderAdminNoteList(uni,stream,sem,notes){ const editing=adminEditState.editing; return '<h3>Add Note</h3><label class="field-label">Title</label><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><label class="field-label">Body (HTML allowed)</label><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="noteUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+(notes.length?'<h3 style="margin-top:20px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'note\',index:'+i+'};renderAdminContentManager(\'note\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
+function renderAdminNoteList(uni,stream,sem,notes){ const editing=adminEditState.editing; return '<h3>Add Note</h3><label class="field-label">Title</label><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="noteUrl" class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+(notes.length?'<h3 style="margin-top:20px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'note\',index:'+i+'};renderAdminContentManager(\'note\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button></div></div>'; }).join(''):''); }
 async function adminAddNote(uni,stream,sem){ const t=(document.getElementById('noteTitle').value||'').trim(); const b=(document.getElementById('noteBody').value||'').trim(); const u=(document.getElementById('noteUrl').value||'').trim(); if(!t) return appAlert('Enter title'); if(!b&&!u) return appAlert('Write body or attach URL'); const c=getUniContent(uni,stream,sem); c.notes.push({title:t,body:b,url:u}); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }
 async function adminSaveNote(uni,stream,sem,i){ const t=(document.getElementById('editNoteTitle').value||'').trim(); const b=(document.getElementById('editNoteBody').value||'').trim(); const u=(document.getElementById('editNoteUrl').value||'').trim(); if(!t) return appAlert('Enter title'); const c=getUniContent(uni,stream,sem); if(!c.notes[i]) return; c.notes[i]={title:t,body:b,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Note updated!'); renderAdminContentManager('note'); }
 function adminDeleteNote(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.notes.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }); }
@@ -1615,18 +1509,16 @@ function formatQuestionsForEdit(qs){ return qs.map((q,i)=>{ const lines=[(i+1)+'
 function renderAdminExamList(uni,stream,sem,exams){
   const editing=adminEditState.editing;
   const editorForm=(ex,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Exam Name</label><input type="text" id="editExamName" class="field-input" value="'+escapeAttr(ex.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editExamChapter" class="field-input" value="'+escapeAttr(ex.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editExamYear" class="field-input" value="'+escapeAttr(ex.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editExamTime" class="field-input" value="'+(ex.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editExamText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(ex.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editExamUrl" class="field-input" value="'+escapeAttr(ex.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'exam\')">Cancel</button></div></div>';
-  return '<h3>Add Exam</h3><label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="examUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+(exams.length?'<h3 style="margin-top:20px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'exam\',index:'+oi+'};renderAdminContentManager(\'exam\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
+  return '<h3>Add Exam</h3><label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="examUrl" class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+(exams.length?'<h3 style="margin-top:20px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'exam\',index:'+oi+'};renderAdminContentManager(\'exam\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
 }
 async function adminAddExam(uni,stream,sem){ const n=document.getElementById('examName').value.trim(); const ch=(document.getElementById('examChapter').value||'').trim(); const y=(document.getElementById('examYear').value||'').trim(); const tm=parseInt(document.getElementById('examTime').value)||0; const tx=document.getElementById('examText').value.trim(); const u=(document.getElementById('examUrl').value||'').trim(); if(!n) return appAlert('Enter exam name'); if(!tx&&!u) return appAlert('Paste questions or paste URL'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('No valid questions and no URL'); const c=getUniContent(uni,stream,sem); c.exams.push({name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}); setUniContent(uni,stream,sem,c); await appAlert('Added'+(qs.length?' '+qs.length+' questions':'')); renderAdminContentManager('exam'); }
 async function adminSaveExam(uni,stream,sem,i){ const n=(document.getElementById('editExamName').value||'').trim(); const ch=(document.getElementById('editExamChapter').value||'').trim(); const y=(document.getElementById('editExamYear').value||'').trim(); const tm=parseInt(document.getElementById('editExamTime').value)||0; const tx=document.getElementById('editExamText').value.trim(); const u=(document.getElementById('editExamUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); if(!c.exams[i]) return; c.exams[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Exam updated!'); renderAdminContentManager('exam'); }
 function adminDeleteExam(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.exams.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('exam'); }); }
 
-/* ============ ADMIN COC LIST (1st semester only) ============ */
 function renderAdminCocList(uni,stream,sem,cocs){
-  // COC is always stored on semester 1
   const editing=adminEditState.editing;
   const editorForm=(cx,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">COC Name</label><input type="text" id="editCocName" class="field-input" value="'+escapeAttr(cx.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editCocChapter" class="field-input" value="'+escapeAttr(cx.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editCocYear" class="field-input" value="'+escapeAttr(cx.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editCocTime" class="field-input" value="'+(cx.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editCocText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(cx.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editCocUrl" class="field-input" value="'+escapeAttr(cx.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'coc\')">Cancel</button></div></div>';
-  return '<h3>Add COC</h3><label class="field-label">COC Name</label><input type="text" id="cocName" placeholder="COC Basic 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="cocChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="cocYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="cocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="cocText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="cocUrl" placeholder="https://raw.githubusercontent.com/..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add COC</button>'+(cocs.length?'<h3 style="margin-top:20px;">Current ('+cocs.length+')</h3>'+sortExamsByYear(cocs).map(cx=>{ const oi=cocs.indexOf(cx); const isEdit=editing&&editing.type==='coc'&&editing.index===oi; if(isEdit) return editorForm(cx,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(cx.chapter?'<span class="chapter-tag">'+escapeHtml(cx.chapter)+'</span>':'')+(cx.year?'<span style="background:#e65100; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(cx.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(cx.name)+'</span></div><div style="font-size:11px; color:#888;">'+(cx.questions||[]).length+' Q'+(cx.url?' 📎':'')+' · '+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'coc\',index:'+oi+'};renderAdminContentManager(\'coc\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
+  return '<h3>Add COC</h3><label class="field-label">COC Name</label><input type="text" id="cocName" placeholder="COC Basic 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="cocChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="cocYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="cocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="cocText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="cocUrl" class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add COC</button>'+(cocs.length?'<h3 style="margin-top:20px;">Current ('+cocs.length+')</h3>'+sortExamsByYear(cocs).map(cx=>{ const oi=cocs.indexOf(cx); const isEdit=editing&&editing.type==='coc'&&editing.index===oi; if(isEdit) return editorForm(cx,oi); return '<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(cx.chapter?'<span class="chapter-tag">'+escapeHtml(cx.chapter)+'</span>':'')+(cx.year?'<span style="background:#e65100; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(cx.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(cx.name)+'</span></div><div style="font-size:11px; color:#888;">'+(cx.questions||[]).length+' Q'+(cx.url?' 📎':'')+' · '+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div><div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\'coc\',index:'+oi+'};renderAdminContentManager(\'coc\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+oi+')">X</button></div></div>'; }).join(''):'');
 }
 async function adminAddCoc(uni,stream,sem){ const n=document.getElementById('cocName').value.trim(); const ch=(document.getElementById('cocChapter').value||'').trim(); const y=(document.getElementById('cocYear').value||'').trim(); const tm=parseInt(document.getElementById('cocTime').value)||0; const tx=document.getElementById('cocText').value.trim(); const u=(document.getElementById('cocUrl').value||'').trim(); if(!n) return appAlert('Enter COC name'); if(!tx&&!u) return appAlert('Paste questions or paste URL'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('No valid questions and no URL'); const c=getUniContent(uni,stream,1); c.cocs=c.cocs||[]; c.cocs.push({name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}); setUniContent(uni,stream,1,c); await appAlert('Added'+(qs.length?' '+qs.length+' questions':'')); renderAdminContentManager('coc'); }
 async function adminSaveCoc(uni,stream,sem,i){ const n=(document.getElementById('editCocName').value||'').trim(); const ch=(document.getElementById('editCocChapter').value||'').trim(); const y=(document.getElementById('editCocYear').value||'').trim(); const tm=parseInt(document.getElementById('editCocTime').value)||0; const tx=document.getElementById('editCocText').value.trim(); const u=(document.getElementById('editCocUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,1); c.cocs=c.cocs||[]; if(!c.cocs[i]) return; c.cocs[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,1,c); adminEditState.editing=null; await appAlert('COC updated!'); renderAdminContentManager('coc'); }
@@ -1640,12 +1532,9 @@ function renderAdminBulkAdd(){
   const stream = adminBulkState.stream || 'Natural';
   const semester = adminBulkState.semester || 1;
   const uniOpts = CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  const cocSection = (semester === 1)
-    ? '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">🎯 COC <span style="font-size:10px;color:#888;font-weight:600;">(optional · 1st semester only)</span></h3><input type="text" id="bulkCocName" placeholder="COC name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkCocChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkCocYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkCocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkCocText" placeholder="Paste questions (optional if URL provided)" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkCocUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div>'
-    : '<div style="background:#e3f2fd;border-left:4px solid #2196f3;border-radius:10px;padding:10px 14px;font-size:12px;color:#1565c0;margin-bottom:14px;line-height:1.6;">COC section hidden — COC is only available in 1st Semester.</div>';
-  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add — Module + Note + Exam + COC</h2><p style="font-size:12.5px;color:#666;line-height:1.7;margin-bottom:14px;">Fill any of the sections with GitHub raw URLs. Empty sections are skipped.</p><label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex;gap:8px;margin-bottom:12px;"><button type="button" onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Natural'?'#6a3093':'#fff')+';color:'+(stream==='Natural'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Natural</button><button type="button" onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Social'?'#6a3093':'#fff')+';color:'+(stream==='Social'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex;gap:8px;margin-bottom:20px;"><button type="button" onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+';background:'+(semester===1?'#6a3093':'#fff')+';color:'+(semester===1?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">1st Sem</button><button type="button" onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+';background:'+(semester===2?'#6a3093':'#fff')+';color:'+(semester===2?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">2nd Sem</button></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkBookChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkBookYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><textarea id="bulkBookDesc" placeholder="Description (optional)" class="field-textarea" style="min-height:70px; margin-bottom:8px;"></textarea><input type="url" id="bulkBookUrl" placeholder="GitHub raw URL" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body (HTML allowed)" class="field-textarea" style="margin-bottom:8px;"></textarea><input type="url" id="bulkNoteUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam <span style="font-size:10px;color:#888;font-weight:600;">(optional)</span></h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkExamTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkExamText" placeholder="Paste questions (optional if URL provided)" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkExamUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div>'+cocSection+'<div id="bulkStatus" style="font-size:12.5px;color:#6a3093;min-height:18px;margin-bottom:10px;font-weight:700;"></div><button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit All Filled Sections</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  const cocSection = (semester === 1) ? '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">🎯 COC <span style="font-size:10px;color:#888;font-weight:600;">(optional · 1st semester only)</span></h3><input type="text" id="bulkCocName" placeholder="COC name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkCocChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkCocYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkCocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkCocText" placeholder="Paste questions (optional if URL provided)" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkCocUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div>' : '<div style="background:#e3f2fd;border-left:4px solid #2196f3;border-radius:10px;padding:10px 14px;font-size:12px;color:#1565c0;margin-bottom:14px;line-height:1.6;">COC section hidden — COC is only available in 1st Semester.</div>';
+  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add — Module + Note + Exam + COC</h2><label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex;gap:8px;margin-bottom:12px;"><button type="button" onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Natural'?'#6a3093':'#fff')+';color:'+(stream==='Natural'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Natural</button><button type="button" onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+';background:'+(stream==='Social'?'#6a3093':'#fff')+';color:'+(stream==='Social'?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex;gap:8px;margin-bottom:20px;"><button type="button" onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+';background:'+(semester===1?'#6a3093':'#fff')+';color:'+(semester===1?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">1st Sem</button><button type="button" onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1;padding:10px;border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+';background:'+(semester===2?'#6a3093':'#fff')+';color:'+(semester===2?'#fff':'#555')+';border-radius:10px;font-weight:700;cursor:pointer;">2nd Sem</button></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkBookChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkBookYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><textarea id="bulkBookDesc" placeholder="Description (optional)" class="field-textarea" style="min-height:70px; margin-bottom:8px;"></textarea><input type="url" id="bulkBookUrl" placeholder="GitHub raw URL" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea><input type="url" id="bulkNoteUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamChapter" placeholder="Chapter (optional)" class="field-input" style="margin-bottom:8px;"><input type="text" id="bulkExamYear" placeholder="Year (optional)" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="bulkExamTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:8px;"><label class="field-label">Questions</label><textarea id="bulkExamText" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea><input type="url" id="bulkExamUrl" placeholder="Attachment URL (optional)" class="field-input" style="margin-bottom:8px;"></div>'+cocSection+'<div id="bulkStatus" style="font-size:12.5px;color:#6a3093;min-height:18px;margin-bottom:10px;font-weight:700;"></div><button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit All Filled Sections</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-
 async function adminSubmitBulk(){
   if(!isAdminMode()) return;
   const uni = (document.getElementById('bulkUni')||{}).value || adminBulkState.uni;
@@ -1689,32 +1578,13 @@ async function adminSubmitBulk(){
   try {
     const c = getUniContent(uni, stream, semester);
     const added = { books:0, notes:0, exams:0, cocs:0 };
-    if(hasBook){
-      if(!bookName){ status.textContent=''; return appAlert('Module needs a name'); }
-      if(!bookUrl){ status.textContent=''; return appAlert('Module needs a URL'); }
-      c.pdfs.push({name: bookName, chapter: bookChapter, year: bookYear, description: bookDesc, url: bookUrl}); added.books++;
-    }
-    if(hasNote){
-      if(!noteTitle){ status.textContent=''; return appAlert('Note needs a title'); }
-      if(!noteBody && !noteUrl){ status.textContent=''; return appAlert('Note needs a body or URL'); }
-      c.notes.push({title: noteTitle, body: noteBody, url: noteUrl}); added.notes++;
-    }
-    if(hasExam){
-      if(!examName){ status.textContent=''; return appAlert('Exam needs a name'); }
-      const qs = examText ? parseQuestions(examText) : [];
-      if(!qs.length && !examUrl){ status.textContent=''; return appAlert('Exam needs questions or URL'); }
-      c.exams.push({name: examName, chapter: examChapter, year: examYear, timeMinutes: examTime, questions: qs, url: examUrl}); added.exams++;
-    }
-    if(hasCoc){
-      if(!cocName){ status.textContent=''; return appAlert('COC needs a name'); }
-      const qs = cocText ? parseQuestions(cocText) : [];
-      if(!qs.length && !cocUrl){ status.textContent=''; return appAlert('COC needs questions or URL'); }
-      c.cocs = c.cocs || [];
-      c.cocs.push({name: cocName, chapter: cocChapter, year: cocYear, timeMinutes: cocTime, questions: qs, url: cocUrl}); added.cocs++;
-    }
+    if(hasBook){ if(!bookName){ status.textContent=''; return appAlert('Module needs a name'); } if(!bookUrl){ status.textContent=''; return appAlert('Module needs a URL'); } c.pdfs.push({name: bookName, chapter: bookChapter, year: bookYear, description: bookDesc, url: bookUrl}); added.books++; }
+    if(hasNote){ if(!noteTitle){ status.textContent=''; return appAlert('Note needs a title'); } if(!noteBody && !noteUrl){ status.textContent=''; return appAlert('Note needs a body or URL'); } c.notes.push({title: noteTitle, body: noteBody, url: noteUrl}); added.notes++; }
+    if(hasExam){ if(!examName){ status.textContent=''; return appAlert('Exam needs a name'); } const qs = examText ? parseQuestions(examText) : []; if(!qs.length && !examUrl){ status.textContent=''; return appAlert('Exam needs questions or URL'); } c.exams.push({name: examName, chapter: examChapter, year: examYear, timeMinutes: examTime, questions: qs, url: examUrl}); added.exams++; }
+    if(hasCoc){ if(!cocName){ status.textContent=''; return appAlert('COC needs a name'); } const qs = cocText ? parseQuestions(cocText) : []; if(!qs.length && !cocUrl){ status.textContent=''; return appAlert('COC needs questions or URL'); } c.cocs = c.cocs || []; c.cocs.push({name: cocName, chapter: cocChapter, year: cocYear, timeMinutes: cocTime, questions: qs, url: cocUrl}); added.cocs++; }
     setUniContent(uni, stream, semester, c);
     status.textContent = '';
-    await appAlert('✅ Added:\n• '+added.books+' module(s)\n• '+added.notes+' note(s)\n• '+added.exams+' exam(s)\n• '+added.cocs+' COC(s)\n\n→ '+uni+' · '+stream+' · Semester '+semester);
+    await appAlert('✅ Added:\n• '+added.books+' module(s)\n• '+added.notes+' note(s)\n• '+added.exams+' exam(s)\n• '+added.cocs+' COC(s)');
     renderAdminContentManager('exam');
   } catch(e){ status.textContent = ''; await appAlert('Error: '+e.message); }
 }
@@ -1728,38 +1598,19 @@ function renderAdminGeneralExams(){
   const editing = adminGeneralState.editing;
   let html = renderHeader('my')+'<div class="panel"><div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — General Practice Editor</div><h2>General Practice Exams</h2>';
   if(editing === null || editing === undefined){
-    html += '<p style="font-size:13px;color:#666;margin-bottom:14px;">These are the built-in practice subjects shown on the Exam tab.</p><h3>Add New Subject</h3><label class="field-label">Subject Name</label><input type="text" id="newGenName" placeholder="e.g. General Chemistry" class="field-input" style="margin-bottom:10px;"><label class="field-label">Stream</label><select id="newGenStream" class="field-select" style="margin-bottom:10px;"><option value="Natural">Natural</option><option value="Social">Social</option><option value="Both">Both streams</option></select><label class="field-label">Semester</label><select id="newGenSem" class="field-select" style="margin-bottom:10px;"><option value="1">1st Semester</option><option value="2">2nd Semester</option></select><button class="btn btn-primary btn-full" onclick="adminAddGeneralSubject()">+ Add Subject</button><h3 style="margin-top:20px;">Existing Subjects ('+keys.length+')</h3>'+keys.map(k=>{ const s = subjects[k]||{}; const qCount = (s.questions||[]).length; const subSem = (s.semester === 2) ? 2 : 1; const subStream = s.stream || 'Natural'; return '<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="flex:1;"><div style="font-weight:700;font-size:13.5px;">'+escapeHtml(s.name||k)+'</div><div style="font-size:11.5px;color:#888;">'+qCount+' question'+(qCount===1?'':'s')+' · '+escapeHtml(subStream)+' · Sem '+subSem+'</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;border-radius:6px;" onclick="adminEditGeneralSubject(\''+escapeAttr(k)+'\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteGeneralSubject(\''+escapeAttr(k)+'\')">X</button></div></div>'; }).join('')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>';
+    html += '<h3>Add New Subject</h3><label class="field-label">Subject Name</label><input type="text" id="newGenName" class="field-input" style="margin-bottom:10px;"><label class="field-label">Stream</label><select id="newGenStream" class="field-select" style="margin-bottom:10px;"><option value="Natural">Natural</option><option value="Social">Social</option><option value="Both">Both streams</option></select><label class="field-label">Semester</label><select id="newGenSem" class="field-select" style="margin-bottom:10px;"><option value="1">1st Semester</option><option value="2">2nd Semester</option></select><button class="btn btn-primary btn-full" onclick="adminAddGeneralSubject()">+ Add Subject</button><h3 style="margin-top:20px;">Existing Subjects ('+keys.length+')</h3>'+keys.map(k=>{ const s = subjects[k]||{}; const qCount = (s.questions||[]).length; const subSem = (s.semester === 2) ? 2 : 1; const subStream = s.stream || 'Natural'; return '<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="flex:1;"><div style="font-weight:700;font-size:13.5px;">'+escapeHtml(s.name||k)+'</div><div style="font-size:11.5px;color:#888;">'+qCount+' question'+(qCount===1?'':'s')+' · '+escapeHtml(subStream)+' · Sem '+subSem+'</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;border-radius:6px;" onclick="adminEditGeneralSubject(\''+escapeAttr(k)+'\')">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteGeneralSubject(\''+escapeAttr(k)+'\')">X</button></div></div>'; }).join('')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>';
   } else {
     const k = editing; const s = subjects[k];
     if(!s){ adminGeneralState.editing=null; renderAdminGeneralExams(); return; }
-    html += '<div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:14px;font-weight:700;">Editing: '+escapeHtml(s.name||k)+'</div><label class="field-label">Subject Name</label><input type="text" id="genSubName" class="field-input" value="'+escapeAttr(s.name||'')+'" style="margin-bottom:14px;"><label class="field-label">Stream</label><select id="genSubStream" class="field-select" style="margin-bottom:14px;"><option value="Natural" '+(((s.stream||'Natural')==='Natural')?'selected':'')+'>Natural</option><option value="Social" '+((s.stream==='Social')?'selected':'')+'>Social</option><option value="Both" '+((s.stream==='Both')?'selected':'')+'>Both streams</option></select><label class="field-label">Semester</label><select id="genSubSem" class="field-select" style="margin-bottom:14px;"><option value="1" '+((s.semester===2)?'':'selected')+'>1st Semester</option><option value="2" '+((s.semester===2)?'selected':'')+'>2nd Semester</option></select><label class="field-label">Questions</label><textarea id="genSubQ" class="field-textarea" style="min-height:280px;font-family:monospace;margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(s.questions||[]))+'</textarea><div style="background:#e3f2fd;border-left:4px solid #2196f3;border-radius:10px;padding:10px 14px;font-size:11.5px;color:#1565c0;line-height:1.7;margin-bottom:12px;"><strong>Format:</strong> each question starts with <code>1.</code>. Options start with <code>A)</code> <code>B)</code> <code>C)</code> <code>D)</code>. Then <code>Answer: B</code>. Optional <code>Explanation: …</code>.</div><button class="btn btn-primary btn-full" onclick="adminSaveGeneralSubject(\''+escapeAttr(k)+'\')">💾 Save</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="adminGeneralState.editing=null;renderAdminGeneralExams()">Cancel</button>';
+    html += '<div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:14px;font-weight:700;">Editing: '+escapeHtml(s.name||k)+'</div><label class="field-label">Subject Name</label><input type="text" id="genSubName" class="field-input" value="'+escapeAttr(s.name||'')+'" style="margin-bottom:14px;"><label class="field-label">Stream</label><select id="genSubStream" class="field-select" style="margin-bottom:14px;"><option value="Natural" '+(((s.stream||'Natural')==='Natural')?'selected':'')+'>Natural</option><option value="Social" '+((s.stream==='Social')?'selected':'')+'>Social</option><option value="Both" '+((s.stream==='Both')?'selected':'')+'>Both streams</option></select><label class="field-label">Semester</label><select id="genSubSem" class="field-select" style="margin-bottom:14px;"><option value="1" '+((s.semester===2)?'':'selected')+'>1st Semester</option><option value="2" '+((s.semester===2)?'selected':'')+'>2nd Semester</option></select><label class="field-label">Questions</label><textarea id="genSubQ" class="field-textarea" style="min-height:280px;font-family:monospace;margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(s.questions||[]))+'</textarea><button class="btn btn-primary btn-full" onclick="adminSaveGeneralSubject(\''+escapeAttr(k)+'\')">💾 Save</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="adminGeneralState.editing=null;renderAdminGeneralExams()">Cancel</button>';
   }
   html += '</div>'+renderBottomNav('my')+renderChatFab();
   app.innerHTML = html;
 }
-async function adminAddGeneralSubject(){
-  const name=(document.getElementById('newGenName').value||'').trim();
-  const semEl = document.getElementById('newGenSem'); const sem = semEl ? (parseInt(semEl.value) === 2 ? 2 : 1) : 1;
-  const streamEl = document.getElementById('newGenStream'); const stream = streamEl ? (streamEl.value === 'Social' ? 'Social' : streamEl.value === 'Both' ? 'Both' : 'Natural') : 'Natural';
-  if(!name) return appAlert('Enter name.');
-  const key = 'custom_'+Date.now().toString(36);
-  const subjects = getGeneralSubjects();
-  subjects[key] = { name, semester: sem, stream: stream, questions: [], notes: [] };
-  saveGeneralSubjects(subjects); adminGeneralState.editing = key; renderAdminGeneralExams();
-}
+async function adminAddGeneralSubject(){ const name=(document.getElementById('newGenName').value||'').trim(); const semEl = document.getElementById('newGenSem'); const sem = semEl ? (parseInt(semEl.value) === 2 ? 2 : 1) : 1; const streamEl = document.getElementById('newGenStream'); const stream = streamEl ? (streamEl.value === 'Social' ? 'Social' : streamEl.value === 'Both' ? 'Both' : 'Natural') : 'Natural'; if(!name) return appAlert('Enter name.'); const key = 'custom_'+Date.now().toString(36); const subjects = getGeneralSubjects(); subjects[key] = { name, semester: sem, stream: stream, questions: [], notes: [] }; saveGeneralSubjects(subjects); adminGeneralState.editing = key; renderAdminGeneralExams(); }
 function adminEditGeneralSubject(key){ adminGeneralState.editing=key; renderAdminGeneralExams(); }
 function adminDeleteGeneralSubject(key){ appConfirm('Delete this subject and all its questions?').then(ok=>{ if(!ok) return; const subjects=getGeneralSubjects(); delete subjects[key]; saveGeneralSubjects(subjects); renderAdminGeneralExams(); }); }
-async function adminSaveGeneralSubject(key){
-  const subjects = getGeneralSubjects(); if(!subjects[key]) return;
-  const name = (document.getElementById('genSubName').value||'').trim() || subjects[key].name;
-  const semEl = document.getElementById('genSubSem'); const sem = semEl ? (parseInt(semEl.value) === 2 ? 2 : 1) : ((subjects[key].semester === 2) ? 2 : 1);
-  const streamEl = document.getElementById('genSubStream'); const stream = streamEl ? (streamEl.value === 'Social' ? 'Social' : streamEl.value === 'Both' ? 'Both' : 'Natural') : (subjects[key].stream || 'Natural');
-  const text = document.getElementById('genSubQ').value||''; const qs = parseQuestions(text);
-  subjects[key] = { ...subjects[key], name, semester: sem, stream: stream, questions: qs };
-  saveGeneralSubjects(subjects);
-  await appAlert('Saved '+qs.length+' question'+(qs.length===1?'':'s')+' — '+stream+' stream, Semester '+sem+'.');
-  adminGeneralState.editing = null; renderAdminGeneralExams();
-}
+async function adminSaveGeneralSubject(key){ const subjects = getGeneralSubjects(); if(!subjects[key]) return; const name = (document.getElementById('genSubName').value||'').trim() || subjects[key].name; const semEl = document.getElementById('genSubSem'); const sem = semEl ? (parseInt(semEl.value) === 2 ? 2 : 1) : ((subjects[key].semester === 2) ? 2 : 1); const streamEl = document.getElementById('genSubStream'); const stream = streamEl ? (streamEl.value === 'Social' ? 'Social' : streamEl.value === 'Both' ? 'Both' : 'Natural') : (subjects[key].stream || 'Natural'); const text = document.getElementById('genSubQ').value||''; const qs = parseQuestions(text); subjects[key] = { ...subjects[key], name, semester: sem, stream: stream, questions: qs }; saveGeneralSubjects(subjects); await appAlert('Saved '+qs.length+' question'+(qs.length===1?'':'s')+'.'); adminGeneralState.editing = null; renderAdminGeneralExams(); }
 
 function exportContentForShipping(){
   setScreen('admin-content');
@@ -1790,8 +1641,8 @@ async function adminTap(){
   }
 }
 
-function renderBlockedScreen(){ setScreen('my'); app.innerHTML=renderHeader('my')+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">Access Blocked</h2><p style="color:#555; font-size:14px; line-height:1.7; margin:16px 0;">Your account has been blocked. Contact admin.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'?text='+encodeURIComponent('BLOCKED — Device ID: '+getDeviceId())+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">Contact Admin</a>'+((CONFIG.CONTACT_PHONE||'').trim()?'<a href="tel:'+escapeAttr((CONFIG.CONTACT_PHONE||'').trim())+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:8px;">📞 '+escapeHtml(CONFIG.CONTACT_PHONE)+'</a>':'')+'</div>'+renderBottomNav('my')+renderChatFab(); }
-function renderKeyBlockedScreen(){ const r=keyLockRemaining(), a=getKeyAttempts(); setScreen('my'); app.innerHTML=renderHeader('my')+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">Too Many Wrong Keys</h2><p style="color:#666; margin:12px 0;">Block #'+a.blockCount+'.</p><div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; margin:14px 0; color:#c62828; font-weight:800; font-size:16px;">Remaining: '+r.d+'d '+r.h+'h '+r.m+'m</div><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">Contact Admin</a>'+((CONFIG.CONTACT_PHONE||'').trim()?'<a href="tel:'+escapeAttr((CONFIG.CONTACT_PHONE||'').trim())+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:8px;">📞 '+escapeHtml(CONFIG.CONTACT_PHONE)+'</a>':'')+'</div>'+renderBottomNav('my')+renderChatFab(); }
+function renderBlockedScreen(){ setScreen('my'); app.innerHTML=renderHeader('my')+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">Access Blocked</h2><p style="color:#555; font-size:14px; line-height:1.7; margin:16px 0;">Your account has been blocked. Contact admin.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">Contact Admin</a>'+((CONFIG.CONTACT_PHONE||'').trim()?'<a href="tel:'+escapeAttr((CONFIG.CONTACT_PHONE||'').trim())+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:8px;">📞 '+escapeHtml(CONFIG.CONTACT_PHONE)+'</a>':'')+'</div>'+renderBottomNav('my')+renderChatFab(); }
+function renderKeyBlockedScreen(){ const r=keyLockRemaining(), a=getKeyAttempts(); setScreen('my'); app.innerHTML=renderHeader('my')+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">Too Many Wrong Keys</h2><p style="color:#666; margin:12px 0;">Block #'+a.blockCount+'.</p><div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; margin:14px 0; color:#c62828; font-weight:800; font-size:16px;">Remaining: '+r.d+'d '+r.h+'h '+r.m+'m</div><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">Contact Admin</a></div>'+renderBottomNav('my')+renderChatFab(); }
 function renderClosureScreen(){ setScreen(currentTab); app.innerHTML=renderHeader(currentTab)+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">App Closed Today</h2><p style="color:#555; margin:16px 0;">Closed every year on 30 Nehase.</p></div>'+renderBottomNav(currentTab)+renderChatFab(); }
 
 function renderPlayStoreContact(){
@@ -1801,54 +1652,27 @@ function renderPlayStoreContact(){
   const u = getCurrentUser();
   const phone = (CONFIG.CONTACT_PHONE || '').trim();
   const msg = 'Hi admin, I want to unlock All Freshman ET.\n\nDevice hash: ' + getDeviceHash() + '\nName: ' + ((u && u.name) || '') + '\nPhone: ' + (getCurrentUserPhone() || '');
-  const link = group
-    ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,''))
-    : (tg ? 'https://t.me/' + tg + '?text=' + encodeURIComponent(msg) : '#');
-  app.innerHTML = renderHeader(currentTab)
-    + '<div class="locked-box">'
-    +   '<div class="icon">🔓</div>'
-    +   '<h2>Unlock Full Access</h2>'
-    +   '<p>To get full access, contact the admin on Telegram'+(phone?' or call':'')+'.<br>You will receive your license key after payment.</p>'
-    +   '<a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📨 Contact Admin on Telegram</a>'
-    +   (phone ? '<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📞 Call '+escapeHtml(phone)+'</a>' : '')
-    +   '<button class="btn btn-primary btn-full" onclick="renderEnterKey()">I Have a License Key</button>'
-    + '</div>'
-    + renderBottomNav(currentTab) + renderChatFab();
+  const link = group ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'')) : (tg ? 'https://t.me/' + tg + '?text=' + encodeURIComponent(msg) : '#');
+  app.innerHTML = renderHeader(currentTab) + '<div class="locked-box"><div class="icon">🔓</div><h2>Unlock Full Access</h2><p>To get full access, contact the admin on Telegram'+(phone?' or call':'')+'.<br>You will receive your license key after payment.</p><a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📨 Contact Admin on Telegram</a>'+(phone ? '<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📞 Call '+escapeHtml(phone)+'</a>' : '')+'<button class="btn btn-primary btn-full" onclick="renderEnterKey()">I Have a License Key</button></div>' + renderBottomNav(currentTab) + renderChatFab();
 }
-
 async function copyPaymentInfo(){
-  const methods = (Array.isArray(CONFIG.PAYMENT_METHODS) && CONFIG.PAYMENT_METHODS.length)
-    ? CONFIG.PAYMENT_METHODS
-    : DEFAULT_CONFIG.PAYMENT_METHODS;
+  const methods = (Array.isArray(CONFIG.PAYMENT_METHODS) && CONFIG.PAYMENT_METHODS.length) ? CONFIG.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
   let txt = 'PAYMENT DETAILS\n-----------\n';
   txt += 'Price: ' + CONFIG.PRICE_BIRR + ' ETB\n\n';
   methods.forEach(m => { if (m && m.name && m.number) txt += m.name + ': ' + m.number + '\n'; });
   txt += '\nAccount name: ' + CONFIG.OWNER_NAME;
   const phone = (CONFIG.CONTACT_PHONE || '').trim();
   if (phone) txt += '\nContact: ' + phone;
-  try {
-    navigator.clipboard.writeText(txt).then(()=>appAlert('✅ Payment details copied.\n\nPaste into Telegram chat.'));
-  } catch(e) {
-    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-    await appAlert('✅ Payment details copied.\n\nPaste into Telegram chat.');
-  }
+  try { navigator.clipboard.writeText(txt).then(()=>appAlert('✅ Payment details copied.')); } catch(e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); await appAlert('✅ Payment details copied.'); }
 }
-
 let payState={ stage:1, method:'', ft:'', screenshot:null, targetTab:'book' };
-function renderPaymentFlow(tab){
-  renderPlayStoreContact();
-  return;
-  _takeSnapshot(); payState={stage:1,method:'',ft:'',screenshot:null,targetTab:tab}; renderPayStage();
-}
+function renderPaymentFlow(tab){ renderPlayStoreContact(); return; _takeSnapshot(); payState={stage:1,method:'',ft:'',screenshot:null,targetTab:tab}; renderPayStage(); }
 function renderPayStage(){
   setScreen('payment');
   const s=payState.stage; const tutorials=getTutorials(); const accessNow=checkAccess();
   const headerMsg = accessNow.reason==='license-expired' ? 'Your license expired — contact admin' : 'Unlock access';
   app.innerHTML=renderHeader(payState.targetTab)+'<div class="panel">'+(s===1?'<h2>'+headerMsg+'</h2><div style="background:linear-gradient(135deg,#6a3093,#4a2568); color:#fff; border-radius:14px; padding:20px; text-align:center; margin-bottom:16px;"><div style="font-size:12px; opacity:.85;">ONE-TIME PAYMENT (1 YEAR ACCESS)</div><div style="font-size:36px; font-weight:800;">'+CONFIG.PRICE_BIRR+' ETB</div></div>'+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'<h3>Choose Method</h3><div style="display:flex; flex-direction:column; gap:10px;">'+((CONFIG.PAYMENT_METHODS||[]).map(m=>'<button class="btn" onclick="pickMethod(\''+escapeAttr(m.name)+'\')" style="background:#e8f5e9; color:#2e7d32; text-align:left; padding:14px 16px; border:2px solid #4caf50;"><strong>'+escapeHtml(m.name)+'</strong> — '+escapeHtml(m.number)+'</button>').join(''))+'</div>':'')+(s===2?'<h2>Complete Payment</h2><p>Send <strong>'+CONFIG.PRICE_BIRR+' ETB</strong> to:</p><div style="background:#f7f7fa; padding:16px; border-radius:12px; text-align:center; margin:12px 0;"><div style="font-family:monospace; font-size:20px; font-weight:800; color:#6a3093;">'+escapeHtml(payState.method)+'</div><div style="font-size:11px; color:#888; margin-top:6px;">Account: '+CONFIG.OWNER_NAME+'</div></div><div class="btn-row"><button class="btn btn-ghost" onclick="payState.stage=1;renderPayStage()">Back</button><button class="btn btn-primary" onclick="payState.stage=3;renderPayStage()">I Have Paid</button></div>':'')+(s===3?'<h2>Submit Payment Proof</h2><label class="field-label">Screenshot</label><div id="ssDrop" style="border:2px dashed #bbb; border-radius:12px; padding:24px; text-align:center; background:#fafafa; cursor:pointer;"><div style="font-size:13px; color:#555; font-weight:600;">Tap to upload</div></div><input type="file" id="ssInput" accept="image/*"><div id="ssPreview" style="margin-top:10px; font-size:12px;"></div><div id="ssProtectedPreview" style="display:none; margin-top:14px;"><div style="background:#c62828; color:#fff; padding:8px 12px; border-radius:10px 10px 0 0; font-size:11px; font-weight:700; text-align:center;">PREVIEW ONLY</div><img id="ssPreviewImg" style="width:100%; border-radius:0 0 10px 10px; border:2px solid #c62828; border-top:none; display:block;"></div><label class="field-label">FT Number</label><input type="text" id="ftInput" placeholder="FT24ABC123XYZ" class="field-input" style="font-family:monospace; text-transform:uppercase;"><div id="submitMsg" style="margin-top:14px; font-size:13px;"></div><div class="btn-row"><button class="btn btn-ghost" onclick="payState.stage=2;renderPayStage()">Back</button><button class="btn btn-primary" onclick="submitPayment()">Submit</button></div>':'')+'</div>'+renderBottomNav(payState.targetTab)+renderChatFab();
-  if(s===3){
-    document.getElementById('ssDrop').addEventListener('click',()=>document.getElementById('ssInput').click());
-    document.getElementById('ssInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; if(!f.type.startsWith('image/')){ document.getElementById('ssPreview').innerHTML='<span style="color:#c62828;">Must be image</span>'; payState.screenshot=null; return; } if(f.size<10240||f.size>5242880){ document.getElementById('ssPreview').innerHTML='<span style="color:#c62828;">Size 10KB–5MB</span>'; payState.screenshot=null; return; } const r=new FileReader(); r.onload=()=>{ payState.screenshot={name:f.name,size:f.size,data:r.result}; document.getElementById('ssPreview').innerHTML='<span style="color:#2e7d32;">OK '+escapeHtml(f.name)+'</span>'; document.getElementById('ssPreviewImg').src=r.result; document.getElementById('ssProtectedPreview').style.display='block'; }; r.readAsDataURL(f); });
-  }
+  if(s===3){ document.getElementById('ssDrop').addEventListener('click',()=>document.getElementById('ssInput').click()); document.getElementById('ssInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; if(!f.type.startsWith('image/')){ document.getElementById('ssPreview').innerHTML='<span style="color:#c62828;">Must be image</span>'; payState.screenshot=null; return; } if(f.size<10240||f.size>5242880){ document.getElementById('ssPreview').innerHTML='<span style="color:#c62828;">Size 10KB–5MB</span>'; payState.screenshot=null; return; } const r=new FileReader(); r.onload=()=>{ payState.screenshot={name:f.name,size:f.size,data:r.result}; document.getElementById('ssPreview').innerHTML='<span style="color:#2e7d32;">OK '+escapeHtml(f.name)+'</span>'; document.getElementById('ssPreviewImg').src=r.result; document.getElementById('ssProtectedPreview').style.display='block'; }; r.readAsDataURL(f); }); }
 }
 function pickMethod(m){ payState.method=m; payState.stage=2; renderPayStage(); }
 function submitPayment(){
@@ -1859,16 +1683,15 @@ function submitPayment(){
   if(!/^[A-Z0-9]+$/.test(ft)) return msg.innerHTML='<div style="color:#c62828;">Letters/numbers only</div>';
   const u=getCurrentUser();
   savePaymentReq({ft,method:payState.method,amount:CONFIG.PRICE_BIRR,submittedAt:Date.now(),status:'pending',screenshotName:payState.screenshot.name,deviceHash:getDeviceHash(),profile:{name:(u&&u.name)||'',phone:(u&&u.phone)||'',university:(u&&u.university)||'',stream:(u&&u.stream)||''}});
-  msg.innerHTML='<div style="color:#2e7d32; font-weight:700;">✅ Submitted! Send screenshot + phone to admin on Telegram.</div>';
+  msg.innerHTML='<div style="color:#2e7d32; font-weight:700;">✅ Submitted!</div>';
   setTimeout(()=>renderPendingScreen(payState.targetTab),1800);
 }
 function renderPendingScreen(tab){
   setScreen('pending');
   const r=getPaymentReq(); if(!r){ renderPaymentFlow(tab); return; }
-  const tgMsg = 'PAYMENT PROOF\n-----------\nName: '+(r.profile.name||'-')+'\nPhone: '+(r.profile.phone||'-')+'\nUniversity: '+(r.profile.university||'-')+'\nStream: '+(r.profile.stream||'-')+'\nMethod: '+r.method+'\nAmount: '+r.amount+' ETB\nFT: '+r.ft+'\nDevice Hash: '+getDeviceHash()+'\n\n(Sending screenshot in next message)';
+  const tgMsg = 'PAYMENT PROOF\n-----------\nName: '+(r.profile.name||'-')+'\nPhone: '+(r.profile.phone||'-')+'\nUniversity: '+(r.profile.university||'-')+'\nStream: '+(r.profile.stream||'-')+'\nMethod: '+r.method+'\nAmount: '+r.amount+' ETB\nFT: '+r.ft+'\nDevice Hash: '+getDeviceHash();
   app.innerHTML=renderHeader(tab)+'<div class="panel" style="text-align:center;"><h2>Payment Pending</h2><p style="color:#555; font-size:13.5px; line-height:1.7;">Send screenshot + phone number to admin on Telegram.</p><div style="background:#f7f7fa; border-radius:12px; padding:16px; text-align:left; margin:16px 0; font-size:13px; line-height:1.8;"><div><strong>FT:</strong> '+escapeHtml(r.ft)+'</div><div><strong>Method:</strong> '+escapeHtml(r.method)+'</div><div><strong>Amount:</strong> '+r.amount+' ETB</div><div><strong>Phone:</strong> '+escapeHtml(r.profile.phone||'-')+'</div><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div></div><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'?text='+encodeURIComponent(tgMsg)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-bottom:10px;">📨 Send to @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a><button class="btn btn-primary btn-full" style="margin-bottom:10px;" onclick="renderEnterKey()">I Have a License Key</button><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+renderBottomNav(tab)+renderChatFab();
 }
-
 function renderEnterKey(){
   setScreen('enter-key');
   const locked = isKeyLocked();
@@ -1885,7 +1708,6 @@ function submitLicenseKey(){
   if(res.reason==='blocked'){ msg.innerHTML='<div style="color:#c62828;">Too many attempts. Blocked.</div>'; setTimeout(()=>renderKeyBlockedScreen(), 1200); return; }
   msg.innerHTML='<div style="color:#c62828;">Invalid key.</div>';
 }
-
 function parseQuestions(text){
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
   const questions=[]; let current=null, answerKeyMode=false; const answerKey={};
@@ -1903,9 +1725,9 @@ function parseQuestions(text){
   questions.forEach((q,i)=>{ const l=q.inlineAnswer||answerKey[i+1]; if(l) q.answer=l.charCodeAt(0)-65; delete q.inlineAnswer; });
   return questions.filter(q=>q.options.length>=2);
 }
-
 (function init(){
   applyTheme(); applyAdminModeClass(); reloadConfig();
+  if (window._applySavedZoom) window._applySavedZoom();
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
   syncRemoteContent().catch(()=>{});
   try { history.pushState({ nav: true }, ''); } catch(e){}
@@ -1916,7 +1738,6 @@ function parseQuestions(text){
   switchTab('book');
   _navReady=true;
 })();
-
 Object.assign(window, {
   switchTab, renderCurrentScreen, renderMy, renderSignUp, renderSignIn, renderForgotPassword,
   submitSignUp, submitSignIn, pickStream, togglePassword, showPostAuthWarning,
@@ -1924,8 +1745,7 @@ Object.assign(window, {
   renderPaymentFlow, renderPlayStoreContact, copyPaymentInfo, renderPendingScreen,
   renderBooksHome, renderNotesHome, renderExamHome, renderCocHome,
   renderBookList, renderNoteList, renderExamList, renderCocList,
-  openBook, openNote,
-  setBookZoom, getBookZoom, setNoteZoom, getNoteZoom,
+  openBook, openNote, setBookZoom, getBookZoom, setNoteZoom, getNoteZoom,
   startUniExam, startBuiltInExam, startUniCoc, startQuiz,
   selectOption, nextQuestion, prevQuestion, skipQuestion,
   jumpToSkipped, finishExam, retakeExam, renderProgress, clearHistory,
@@ -1942,8 +1762,7 @@ Object.assign(window, {
   adminTap, syncNow, exportContentForShipping, copyExport, clearDraftContent,
   saveTutorialSettings, renderEnterKey, submitLicenseKey, goBack,
   renderAdminActivateUser, adminPickUserForActivation, adminGenerateActivationKey, adminCopyKey,
-  adminShowMasterKey,
-  renderAdminBulkAdd, adminSubmitBulk,
+  adminShowMasterKey, renderAdminBulkAdd, adminSubmitBulk,
   renderAdminGeneralExams, adminAddGeneralSubject, adminEditGeneralSubject,
   adminDeleteGeneralSubject, adminSaveGeneralSubject,
   getGeneralSubjects, saveGeneralSubjects, getUniInfoForStream,
@@ -1957,15 +1776,14 @@ Object.assign(window, {
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays
 });
 </script>
-
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('sw.js', { scope: './' })
       .then(() => console.log('Offline mode active'))
       .catch(err => console.log('SW error:', err));
   });
 }
 </script>
 </body>
-</html>
+ </html>
