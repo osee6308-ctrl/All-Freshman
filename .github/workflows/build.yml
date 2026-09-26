@@ -61,28 +61,36 @@ jobs:
             }
           }
           EOF
-          echo "----- capacitor.config.json content -----"
-          cat capacitor.config.json
-          echo "----- verifying appId -----"
-          grep -q "appId" capacitor.config.json && echo "OK: appId present"
 
       - name: Add Android platform
         run: |
           npx cap add android || true
           npx cap sync android
 
-      - name: Patch MainActivity with FLAG_SECURE
+      - name: Overwrite MainActivity with FLAG_SECURE
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
-          echo "Patching: $FILE"
+          echo "Rewriting: $FILE"
+          PKG=$(grep '^package ' "$FILE" | sed 's/package //;s/;//')
+          echo "Package: $PKG"
+          cat > "$FILE" <<EOF
+          package $PKG;
 
-          grep -q "import android.view.WindowManager;" "$FILE" || \
-            sed -i 's|import com.getcapacitor.BridgeActivity;|import android.view.WindowManager;\nimport com.getcapacitor.BridgeActivity;|' "$FILE"
+          import android.os.Bundle;
+          import android.view.WindowManager;
+          import com.getcapacitor.BridgeActivity;
 
-          grep -q "FLAG_SECURE" "$FILE" || \
-            sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);|' "$FILE"
-
-          grep -q "FLAG_SECURE" "$FILE" || (echo "PATCH FAILED — MainActivity not modified" && exit 1)
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+              }
+          }
+          EOF
+          echo "----- New MainActivity.java -----"
+          cat "$FILE"
+          grep -q "FLAG_SECURE" "$FILE" && echo "OK: FLAG_SECURE applied"
 
       - name: Build signed AAB
         working-directory: android
