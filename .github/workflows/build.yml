@@ -20,49 +20,55 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # 🔧 FIXED: Upgraded to v4 and passed an empty packages string
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
 
       - name: Install dependencies
         run: npm install
 
-      - name: Generate new keystore
+      - name: Restore keystore (stable signing key)
         run: |
-          keytool -genkey -v \
-            -keystore android-keystore.jks \
-            -alias allfreshman \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -dname "CN=All Freshman ET, OU=Mobile, O=Osee, L=Addis Ababa, ST=Addis Ababa, C=ET"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android-keystore.jks
+          test -s android-keystore.jks || (echo "Keystore missing — set KEYSTORE_BASE64 secret" && exit 1)
 
       - name: Add Android platform
         run: |
-          npx cap add android
+          npx cap add android || true
           npx cap sync android
 
       - name: Patch MainActivity with FLAG_SECURE
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
-          sed -i 's|import com.getcapacitor.BridgeActivity;|import android.view.WindowManager;\nimport com.getcapacitor.BridgeActivity;|' "$FILE"
-          sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);|' "$FILE"
+          echo "Patching: $FILE"
+
+          grep -q "import android.view.WindowManager;" "$FILE" || \
+            sed -i 's|import com.getcapacitor.BridgeActivity;|import android.view.WindowManager;\nimport com.getcapacitor.BridgeActivity;|' "$FILE"
+
+          grep -q "FLAG_SECURE" "$FILE" || \
+            sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);|' "$FILE"
+
+          grep -q "FLAG_SECURE" "$FILE" || (echo "PATCH FAILED — MainActivity not modified" && exit 1)
 
       - name: Build signed AAB
+        working-directory: android
         run: |
-          cd android
           chmod +x gradlew
           ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file=../android-keystore.jks \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/android-keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=allfreshman \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Build signed APK
+        working-directory: android
         run: |
-          cd android
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=../android-keystore.jks \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/android-keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=allfreshman \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Upload APK
@@ -70,15 +76,15 @@ jobs:
         with:
           name: AllFreshman-APK
           path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: AllFreshman-AAB
           path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
 
-      - name: Upload keystore (IMPORTANT - save this!)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AllFreshman-KEYSTORE
-          path: android-keystore.jks
+      - name: Cleanup keystore from runner
+        if: always()
+        run: rm -f android-keystore.jks
